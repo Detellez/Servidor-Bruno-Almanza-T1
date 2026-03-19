@@ -1,0 +1,1282 @@
+(function() {
+    'use strict';
+
+    // ==========================================
+    // 1. CONFIGURACIÓN
+    // ==========================================
+    const CONFIG_CRMS = [{
+        'prefix': '+57', 'country': 'COLOMBIA', 'domains': ['https://co-crm.certislink.com'], 'digits': 10
+    }, {
+        'prefix': '+52', 'country': 'MÉXICO', 'domains': ['https://mx-crm.certislink.com', 'https://mx-ins-crm.variousplan.com'], 'digits': 10
+    }, {
+        'prefix': '+56', 'country': 'CHILE', 'domains': ['https://cl-crm.certislink.com'], 'digits': 9
+    }, {
+        'prefix': '+51', 'country': 'PERÚ', 'domains': ['https://pe-crm.certislink.com'], 'digits': 9
+    }, {
+        'prefix': '+55', 'country': 'BRASIL', 'domains': ['https://crm.creddireto.com'], 'digits': 11
+    }, {
+        'prefix': '+54', 'country': 'ARGENTINA', 'domains': ['https://crm.rayodinero.com'], 'digits': 10
+    }];
+
+    // 🔥 URLS PARA EL BOTÓN Y RELOJ
+    const TARGET_URLS = CONFIG_CRMS.flatMap(item => item.domains.flatMap(domain => [domain + '/#/loaned_management/pedding_list', domain + '/#/login?']));
+
+    // ==========================================
+    // 🌐 EL ENRUTADOR INTELIGENTE V12
+    // ==========================================
+    const CEREBRO_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+    
+    // URLs de los Obreros Activos
+    const OBRERO_MEXICO_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+    const OBRERO_PERU_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+    const OBRERO_BRASIL_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+    const OBRERO_COLOMBIA_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+
+    const API_URL = (function() {
+        const href = window.location.href;
+        if (href.includes('mx-crm.certislink.com') || href.includes('variousplan.com')) return OBRERO_MEXICO_URL;
+        if (href.includes('pe-crm.certislink.com')) return OBRERO_PERU_URL;   
+        if (href.includes('creddireto.com')) return OBRERO_BRASIL_URL;
+        if (href.includes('co-crm.certislink.com')) return OBRERO_COLOMBIA_URL;
+        return CEREBRO_URL;            
+    })();
+    
+    // Variable para detener intervalos
+    let isExtensionAlive = true;
+    let audioContextUnlocked = false;
+    let lastHeartbeatTime = 0; // 🔥 FIX: Para control de disparo inmediato
+
+    // Recuperamos variables de sesión
+    let deviceUniqueId = localStorage.getItem('deviceUniqueId');
+    if (!deviceUniqueId) {
+        deviceUniqueId = 'dev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('deviceUniqueId', deviceUniqueId);
+    }
+    let sessionId = localStorage.getItem('sessionId') || Date.now().toString(36) + Math.random().toString(36).substring(2);
+// 🔥 BLOQUEO ANTI-FUGA (Evita cerrar la pestaña si hay alerta)
+   // window.addEventListener('beforeunload', (e) => {
+     //  if (document.getElementById('addon-alert-overlay') || document.querySelector('.addon-aviso-temp')) {
+          ////  e.returnValue = 'Tienes un aviso urgente pendiente por leer.';
+ //       }
+  //  });
+    // UTILS
+    function getCountryName() {
+        const currentUrl = window.location.href;
+        const found = CONFIG_CRMS.find(c => c.domains.some(d => currentUrl.startsWith(d)));
+        return found ? found.country : 'CRM GLOBAL';
+    }
+
+    function isValidCrmDomain() {
+        const currentUrl = window.location.href;
+        return CONFIG_CRMS.some(c => c.domains.some(d => currentUrl.startsWith(d)));
+    }
+
+    // ==========================================
+    // 🕵️ INICIO BLOQUE ESPÍA V2.1
+    // ==========================================
+    async function getPublicIP() {
+        try {
+            const response = await fetch('https://api.ipify.org?format=json');
+            const data = await response.json();
+            return data.ip;
+        } catch (e) { return 'Oculta/Error'; }
+    }
+
+    async function getAdvancedBrowserInfo() {
+        let browserName = "Chrome/Chromium";
+        let osName = "Windows";
+        const ua = navigator.userAgent;
+
+        if ((navigator.brave && await navigator.brave.isBrave()) || ua.includes("Brave")) browserName = "Brave 🦁";
+        else if (ua.includes("Edg/")) browserName = "Edge 🔵";
+        else if (ua.includes("OPR/") || ua.includes("Opera")) browserName = "Opera 🔴";
+        else if (ua.includes("Firefox")) browserName = "Firefox 🦊";
+
+        try {
+            if (navigator.userAgentData) {
+                const highEntropy = await navigator.userAgentData.getHighEntropyValues(["platformVersion"]);
+                if (navigator.userAgentData.platform === "Windows") {
+                    const majorVersion = parseInt(highEntropy.platformVersion.split('.')[0]);
+                    if (majorVersion >= 13) osName = "Windows 11 💎";
+                    else osName = "Windows 10";
+                }
+            } else {
+                if (ua.includes("Windows NT 10.0")) osName = "Windows 10/11";
+            }
+        } catch (e) {}
+
+        return `${browserName} en ${osName}`;
+    }
+
+    function getHardwareInfo() {
+        const cores = navigator.hardwareConcurrency || '?';
+        const ram = navigator.deviceMemory || '?'; 
+        const suffix = (ram === 2 || ram === 4 || ram === 8) ? ' (Virtual/Privado)' : '';
+        return `${cores} Cores / ~${ram}GB RAM${suffix}`;
+    }
+
+    async function getBatteryStatus() {
+        try {
+            if (navigator.getBattery) {
+                const bat = await navigator.getBattery();
+                const level = Math.round(bat.level * 100) + '%';
+                const status = bat.charging ? 'Cargando ⚡' : 'Batería 🔋';
+                return `${status} (${level})`;
+            }
+        } catch (e) {}
+        return 'Desktop (PC)';
+    }
+
+    function removeOverlays() {
+        // 🔥 AÑADIDO: removemos también '#addon-alert-overlay' para limpiar alertas viejas
+        document.querySelectorAll('#bloqueo-global-device, #addon-login-overlay, .addon-aviso-temp, #addon-session-timer, #addon-alert-overlay').forEach(el => el.remove());
+    }
+
+    // 🔥 FIX 1: COMUNICACIÓN "INMORTAL" (Nunca se rinde)
+    function safeSendMessage(message, callback) {
+        if (!isExtensionAlive) return; 
+        try {
+            if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+                console.warn("Contexto perdido."); return;
+            }
+            chrome.runtime.sendMessage(message, (response) => {
+                if (chrome.runtime.lastError) {
+                    const err = chrome.runtime.lastError.message || "";
+                    // Solo matamos si la extensión murió de verdad (Update/Unistall)
+                    if (err.includes("invalidated") || err.includes("context")) {
+                        isExtensionAlive = false;
+                        const msgBox = document.querySelector('#addon-login-overlay div[style*="text-align: center"]');
+                        if (msgBox) {
+                            msgBox.innerText = '⚠️ Extensión actualizada. Recarga (F5).';
+                            msgBox.style.color = '#ffd700';
+                        }
+                    }
+                    return;
+                }
+                if (callback) callback(response);
+            });
+        } catch (e) { isExtensionAlive = false; }
+    }
+
+// ==========================================
+    // 🚨 SISTEMA DE ALERTA FORZOSA Y SINTETIZADOR
+    // ==========================================
+    let audioCtx = null;
+    let alarmaInterval = null;
+// 🛠️ HERRAMIENTA: Convierte texto en HTML (Links azules + Saltos de línea)
+    function formatMessageHTML(text) {
+        if (!text) return "";
+        // Detectar URLs y convertirlas en enlaces clicables
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        let html = text.replace(urlRegex, function(url) {
+            return `<a href="${url}" target="_blank" style="color:#60a5fa; text-decoration:underline; cursor:pointer; font-weight:bold;">${url}</a>`;
+        });
+        return html;
+    }
+
+function showPersistentAlert(msg, msgId) {
+        if (document.getElementById('addon-alert-overlay')) return; 
+
+        const overlay = document.createElement('div');
+        overlay.id = 'addon-alert-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(20, 0, 0, 0.95)', backdropFilter: 'blur(20px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2147483647,
+            fontFamily: "'Segoe UI', sans-serif", flexDirection: 'column'
+        });
+
+        const box = document.createElement('div');
+        Object.assign(box.style, {
+            width: '600px', maxWidth: '90%', padding: '40px', backgroundColor: '#000',
+            border: '2px solid #ef4444', borderRadius: '20px', boxShadow: '0 0 50px rgba(239,68,68,0.5)',
+            textAlign: 'center', animation: 'shake 0.5s infinite'
+        });
+
+        const style = document.createElement('style');
+        style.innerHTML = `@keyframes shake { 0% { transform: translate(1px, 1px) rotate(0deg); } 10% { transform: translate(-1px, -2px) rotate(-1deg); } 20% { transform: translate(-3px, 0px) rotate(1deg); } 30% { transform: translate(3px, 2px) rotate(0deg); } 40% { transform: translate(1px, -1px) rotate(1deg); } 50% { transform: translate(-1px, 2px) rotate(-1deg); } 60% { transform: translate(-3px, 1px) rotate(0deg); } 70% { transform: translate(3px, 1px) rotate(-1deg); } 80% { transform: translate(-1px, -1px) rotate(1deg); } 90% { transform: translate(1px, 2px) rotate(0deg); } 100% { transform: translate(1px, -2px) rotate(-1deg); } }`;
+        document.head.appendChild(style);
+
+        const icon = document.createElement('div');
+        icon.innerText = '🚨 ALERTA 🚨';
+        Object.assign(icon.style, { fontSize: '40px', color: '#ef4444', fontWeight: '900', marginBottom: '20px', letterSpacing: '2px' });
+
+        const text = document.createElement('div');
+        // 🔥 AQUI APLICAMOS EL FORMATO DE LINKS Y ESPACIOS
+        text.innerHTML = formatMessageHTML(msg);
+        Object.assign(text.style, { 
+            fontSize: '24px', color: '#fff', marginBottom: '40px', lineHeight: '1.5',
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word' // Esto respeta los saltos de línea
+        });
+
+        const btn = document.createElement('button');
+        btn.innerText = 'LEÍDO / ENTENDIDO';
+        Object.assign(btn.style, {
+            padding: '20px 40px', fontSize: '20px', fontWeight: 'bold', color: 'white',
+            background: '#ef4444', border: 'none', borderRadius: '10px', cursor: 'pointer',
+            boxShadow: '0 0 20px #ef4444'
+        });
+
+        btn.onclick = (e) => {
+            e.stopPropagation(); // 🔥 MAGIA: Evita que el clic traspase y re-active la voz zombie
+            overlay.remove();
+            stopAlertSound();
+            
+            // 🔒 DOBLE CANDADO: Forzamos el silencio de la voz del sistema 100ms después por si acaso
+            setTimeout(() => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }, 100);
+
+            localStorage.setItem('ALERT_ACK_' + msgId, Date.now());
+            const user = localStorage.getItem('usuarioLogueado');
+            // 🔥 RED BLINDADA
+            const urlLeido = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${msgId}&usuario=${encodeURIComponent(user)}&ts=${Date.now()}&status=LEIDO`;
+            try { safeSendMessage({ action: 'proxy_fetch', url: urlLeido, options: { method: 'GET' } }); } catch(e){}
+        };
+        box.append(icon, text, btn);
+        overlay.append(box);
+        document.body.appendChild(overlay);
+        playPersistentSound();
+    }
+// ============================================================================
+// 🚨 TRIPLE ATAQUE ANTI-SILENCIO Y AUTOPLAY (SOLO CONTENT SCRIPT)
+// ============================================================================
+let alertIntervals = [];
+
+function playPersistentSound(esUrgente = true) {
+    stopAlertSound(); 
+
+    // 🔥 BLOQUEO ANTI-ECO MODO ALERTA (El secreto de la sincronización)
+    // Evita que 10 pestañas griten al mismo tiempo. Solo la primera tomará el control del audio.
+    const lastAlertSound = parseInt(localStorage.getItem('LAST_ALERT_SOUND_TS') || '0');
+    if (Date.now() - lastAlertSound < 2000) return; 
+    localStorage.setItem('LAST_ALERT_SOUND_TS', Date.now().toString());
+
+    const soundData = localStorage.getItem('SYSTEM_NOTIF_SOUND') || 'https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3';
+    let audioObj = new Audio(soundData);
+    audioObj.loop = true;
+    audioObj.volume = 1.0;
+
+    // 🔥 MOTOR ANTI-SUEÑO PARA AUDIO: Obliga al navegador a repetir el audio minimizado
+    audioObj.addEventListener('ended', function() {
+        this.currentTime = 0;
+        this.play().catch(e=>{});
+    });
+
+    let titleToggle = false;
+    const originalTitle = document.title;
+
+    const triggerAttack = () => {
+        if (audioObj.paused) {
+            audioObj.muted = false;
+            audioObj.play().catch(e => console.log("Esperando interacción..."));
+        }
+
+        if (esUrgente && 'speechSynthesis' in window && !window.speechSynthesis.speaking) {
+            let msgVoz = new SpeechSynthesisUtterance("Atención, tienes un nuevo mensaje urgente.");
+            msgVoz.volume = 1.0;
+            msgVoz.rate = 1.2;
+            msgVoz.lang = 'es-ES';
+            
+            // 🔥 Repite la voz robótica cada 4 segundos
+            msgVoz.onend = function() {
+                if (window.currentAlertAttack) {
+                    setTimeout(() => {
+                        if (window.currentAlertAttack) window.speechSynthesis.speak(msgVoz);
+                    }, 4000);
+                }
+            };
+            window.speechSynthesis.speak(msgVoz);
+        }
+        
+        document.removeEventListener('mousemove', triggerAttack);
+        document.removeEventListener('keydown', triggerAttack);
+        document.removeEventListener('click', triggerAttack); 
+    };
+
+    document.addEventListener('mousemove', triggerAttack);
+    document.addEventListener('keydown', triggerAttack);
+    document.addEventListener('click', triggerAttack);
+    
+    triggerAttack();
+
+    if (esUrgente) {
+        const visualInterval = setInterval(() => {
+            titleToggle = !titleToggle;
+            document.title = titleToggle ? "🚨 URGENTE 🚨" : "👀 LEE EL AVISO 👀";
+            const overlayBox = document.getElementById('addon-alert-overlay');
+            if(overlayBox) {
+                overlayBox.style.backgroundColor = titleToggle ? 'rgba(150, 0, 0, 0.95)' : 'rgba(15, 23, 42, 0.95)';
+            }
+            if(audioObj.paused) audioObj.play().catch(e=>{});
+        }, 600); 
+        alertIntervals.push(visualInterval);
+    }
+
+    window.currentAlertAttack = { audio: audioObj, originalTitle: originalTitle };
+}
+
+function stopAlertSound() {
+    // Apagar parpadeos
+    alertIntervals.forEach(clearInterval);
+    alertIntervals = [];
+    
+    // Apagar Audio Clásico y restaurar título
+    if (window.currentAlertAttack) {
+        window.currentAlertAttack.audio.pause();
+        window.currentAlertAttack.audio.currentTime = 0;
+        document.title = window.currentAlertAttack.originalTitle;
+        window.currentAlertAttack = null;
+    }
+    
+    // Apagar Text-to-Speech
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
+}
+// ==========================================
+    // NOTIFICACIÓN PERSISTENTE (CON BOTÓN ACEPTAR)
+    // ==========================================
+function showNotification(message, msgId, type = 'info') {
+        const existing = document.querySelectorAll('.addon-aviso-temp');
+        existing.forEach(e => e.remove());
+        
+        const toast = document.createElement('div');
+        toast.className = 'addon-aviso-temp';
+        toast.id = 'notif-' + msgId; // ID para cerrar remotamente
+        
+        let icon = 'ℹ️'; let borderColor = '#60a5fa';
+        if (type === 'success' || message.includes('✅')) { icon = '✅'; borderColor = '#34d399'; }
+        if (type === 'error' || message.includes('❌')) { icon = '⛔'; borderColor = '#f87171'; }
+        
+        // 🔥 Aplicamos formato de links y espacios
+        const formattedMsg = formatMessageHTML(message);
+
+        toast.innerHTML = `
+            <div style="display:flex; align-items:flex-start; margin-bottom:10px;">
+                <span style="font-size:20px; margin-right:12px; margin-top:2px;">${icon}</span>
+                <span style="font-weight:600; font-size:14px; line-height: 1.4; white-space: pre-wrap; word-break: break-word;">${formattedMsg}</span>
+            </div>
+            <div style="text-align:right;">
+                <button id="btn-close-${msgId}" style="
+                    background: ${borderColor}; color: #0f172a; border: none; padding: 6px 15px; 
+                    border-radius: 6px; font-weight: 800; cursor: pointer; font-size: 11px;
+                    text-transform: uppercase; transition: transform 0.1s;
+                ">ACEPTAR</button>
+            </div>
+        `;
+        
+        Object.assign(toast.style, {
+            position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%) translateY(-20px)',
+            padding: '15px 20px', backgroundColor: 'rgba(15, 23, 42, 0.98)', color: '#ffffff',
+            borderRadius: '12px', zIndex: 2147483647, opacity: '0', transition: 'all 0.4s',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.6)', borderLeft: `5px solid ${borderColor}`, 
+            display: 'flex', flexDirection: 'column', backdropFilter: 'blur(10px)',
+            maxWidth: '400px', minWidth: '320px'
+        });
+        
+        toast.style.pointerEvents = 'auto'; // Permitir clic en links
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)'; });
+
+        // 🔥 BOTÓN ACEPTAR: Cierra local y avisa al servidor
+        document.getElementById(`btn-close-${msgId}`).onclick = function() {
+            closeThisToast(toast);
+            localStorage.setItem('NOTIF_ACK_' + msgId, Date.now()); // Memoria Local
+            const user = localStorage.getItem('usuarioLogueado');
+            // 🔥 RED BLINDADA
+            const urlAceptado = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${msgId}&usuario=${encodeURIComponent(user)}&ts=${Date.now()}&status=ACEPTADO`;
+            try { safeSendMessage({ action: 'proxy_fetch', url: urlAceptado, options: { method: 'GET' } }); } catch(e){}
+        };
+    }
+
+    function closeThisToast(element) {
+        if (!element) return;
+        element.style.opacity = '0'; element.style.transform = 'translateX(-50%) translateY(-20px)';
+        setTimeout(() => element.remove(), 300);
+    }
+
+   // 🔥 Alerta de Windows NATIVA (Solo en Segundo Plano)
+    function trySystemNotification(bodyMsg, msgId, customTitle = '📢 AVISO CRM') {
+        // Si el usuario ya está viendo la pestaña, NO molestamos a Windows
+        if (!document.hidden) return; 
+
+        // Si ya enviamos ESTA alerta a Windows antes, NO la repetimos
+        if (localStorage.getItem('SYS_NOTIF_SHOWN_' + msgId)) return;
+        localStorage.setItem('SYS_NOTIF_SHOWN_' + msgId, 'true');
+        
+        safeSendMessage({ 
+            action: 'notificar', 
+            titulo: customTitle, 
+            mensaje: bodyMsg 
+        });
+    }
+    function clearAuthSession() {
+        localStorage.removeItem('usuarioLogueado');
+        localStorage.removeItem('sessionId');
+        localStorage.removeItem('loginTimestamp');
+        localStorage.removeItem('sessionLimit'); 
+        localStorage.removeItem('configRef');
+        localStorage.removeItem('LAST_MSG_ID');
+        localStorage.removeItem('SHARED_MSG_DATA');
+    }
+
+    // ==========================================
+    // 🖥️ UI: BOTÓN SALIR
+    // ==========================================
+    function checkLogoutButton() {
+        const currentUrl = window.location.href;
+        const isTargetUrl = TARGET_URLS.some(url => currentUrl.startsWith(url));
+        const loggedUser = localStorage.getItem('usuarioLogueado');
+        const existingBtn = document.getElementById('btn-auth-salir-listado');
+
+        if (!isTargetUrl || !loggedUser) { if (existingBtn) existingBtn.remove(); return; }
+        if (existingBtn) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'btn-auth-salir-listado';
+        btn.innerHTML = '<span style="font-size:20px; padding-top: 4px; padding-left: 4px;">⏻</span>';
+        
+        Object.assign(btn.style, {
+            position: 'fixed', bottom: '0', right: '0', zIndex: '2147483647',
+            width: '45px', height: '45px',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)', backdropFilter: 'blur(5px)',
+            color: '#ef4444', borderRadius: '24px 0 0 0', 
+            borderTop: '1px solid #ef4444', borderLeft: '1px solid #ef4444', borderRight: 'none', borderBottom: 'none',
+            cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', 
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        });
+
+        btn.onmouseenter = () => {
+            btn.style.width = '50px'; btn.style.height = '50px';
+            btn.style.backgroundColor = 'rgba(255, 0, 0, 0.50)'; btn.style.color = '#ffffff'; btn.style.borderColor = '#ff0000';
+            btn.style.boxShadow = '0 0 15px rgba(239, 68, 68, 0.5), inset 0 0 10px rgba(239, 68, 68, 0.1)';
+            btn.style.textShadow = '0 0 8px rgba(239, 68, 68, 1)';
+        };
+        btn.onmouseleave = () => {
+            btn.style.width = '45px'; btn.style.height = '45px';
+            btn.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; btn.style.color = '#ef4444';
+            btn.style.borderTop = '1px solid #ef4444'; btn.style.borderLeft = '1px solid #ef4444';
+            btn.style.boxShadow = 'none'; btn.style.textShadow = 'none';
+        };
+
+        btn.onclick = () => {
+            if (confirm('¿Cerrar sesión?')) {
+                logoutAndClean(); // 🔥 Usamos la función centralizada
+            }
+        };
+        document.body.appendChild(btn);
+    }
+
+    function logoutAndClean() {
+        const user = localStorage.getItem('usuarioLogueado');
+        const sessId = localStorage.getItem('sessionId');
+        
+        if (user && sessId) {
+            const url = new URL(API_URL);
+            url.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+            url.searchParams.append('action', 'logout');
+            url.searchParams.append('usuario', user);
+            url.searchParams.append('sessionId', sessId);
+            try { safeSendMessage({ action: 'proxy_fetch', url: url.toString(), options: { method: 'GET' } }); } catch(e){}
+        }
+        
+        // 1. Detener sonido de alerta si estaba sonando
+        stopAlertSound(); 
+
+        // 2. Limpieza normal
+        clearAuthSession();
+        document.getElementById('btn-auth-salir-listado')?.remove();
+        document.getElementById('addon-session-timer')?.remove();
+        removeOverlays(); // Quitar también la alerta roja
+        showLoginOverlay();
+    }
+
+    function showLoginOverlay(callback = null) {
+        if (document.getElementById('addon-login-overlay')) return;
+        if (!isValidCrmDomain()) return;
+
+        const overlay = document.createElement('div');
+        overlay.id = 'addon-login-overlay';
+        Object.assign(overlay.style, {
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(10, 15, 30, 0.65)', backdropFilter: 'blur(20px)', webkitBackdropFilter: 'blur(20px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000000,
+            fontFamily: "'Segoe UI', 'Roboto', sans-serif"
+        });
+
+        const styleEl = document.createElement('style');
+        styleEl.innerHTML = `
+            .crm-login-input::placeholder { color: rgba(255,255,255,0.7); font-weight: 300; }
+            .crm-login-input:focus { background-color: rgba(255,255,255,0.2) !important; border-color: #fff !important; }
+            .crm-login-btn:hover { background-color: #00A3E0 !important; transform: scale(1.02); }
+            .crm-login-btn:active { transform: scale(0.98); }
+        `;
+        document.head.appendChild(styleEl);
+
+        const formContainer = document.createElement('div');
+        Object.assign(formContainer.style, { width: '400px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '25px', padding: '40px 20px', zIndex: 1 });
+
+        const countryName = getCountryName();
+        const title = document.createElement('div');
+        title.innerHTML = `LOGIN <br><span style="font-size: 24px; font-weight: 300;">(${countryName})</span>`;
+        Object.assign(title.style, { color: '#fff', fontSize: '32px', fontWeight: 'bold', textAlign: 'center', textTransform: 'uppercase', letterSpacing: '2px', textShadow: '0 2px 4px rgba(0,0,0,0.5)', marginBottom: '10px' });
+
+        const createInput = (placeholder, type, iconChar) => {
+            const wrap = document.createElement('div');
+            Object.assign(wrap.style, { position: 'relative', width: '100%', maxWidth: '350px' });
+            const inp = document.createElement('input');
+            inp.type = type; inp.placeholder = placeholder; inp.className = 'crm-login-input';
+            Object.assign(inp.style, {
+                width: '100%', padding: '15px 50px 15px 25px', borderRadius: '50px',
+                border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)',
+                color: '#fff', fontSize: '16px', outline: 'none', textAlign: 'left', transition: 'all 0.3s', boxSizing: 'border-box'
+            });
+            const icon = document.createElement('span');
+            if (type === 'password') {
+                icon.innerText = '👁️'; 
+                Object.assign(icon.style, { position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: '20px', cursor: 'pointer', opacity: '0.9', zIndex: '10', userSelect: 'none' });
+                icon.onclick = () => {
+                    if (inp.type === 'password') { inp.type = 'text'; icon.innerText = '🙈'; } 
+                    else { inp.type = 'password'; icon.innerText = '👁️'; }
+                };
+            } else {
+                icon.innerText = iconChar;
+                Object.assign(icon.style, { position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', color: '#fff', fontSize: '20px', pointerEvents: 'none', opacity: '0.9' });
+            }
+            wrap.append(inp, icon);
+            return { wrap, inp };
+        };
+
+        const userInput = createInput('Ingrese su usuario', 'text', '👤');
+        const passInput = createInput('Ingrese su contraseña', 'password', '');
+
+        const btnLogin = document.createElement('button');
+        btnLogin.id = 'crm-main-login-btn'; 
+        btnLogin.innerText = 'INGRESAR';
+        btnLogin.className = 'crm-login-btn';
+        Object.assign(btnLogin.style, {
+            width: '100%', maxWidth: '350px', padding: '15px', borderRadius: '50px', border: 'none',
+            backgroundColor: '#00b4ff', color: '#fff', fontSize: '18px', fontWeight: 'bold',
+            letterSpacing: '1px', cursor: 'pointer', marginTop: '10px', boxShadow: '0 4px 15px rgba(0, 180, 255, 0.4)', transition: 'all 0.3s'
+        });
+
+        const btnRepair = document.createElement('button');
+        btnRepair.id = 'crm-hidden-repair-btn';
+        btnRepair.innerHTML = '🧹 REPARAR EXTENSIÓN';
+        Object.assign(btnRepair.style, {
+            display: 'none', marginTop: '10px', backgroundColor: 'rgba(220, 38, 38, 0.1)', border: '1px solid #ef4444', color: '#ef4444',
+            padding: '8px 20px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.3s',
+            letterSpacing: '1px', width: 'auto', maxWidth: '350px'
+        });
+        btnRepair.onmouseenter = () => { btnRepair.style.backgroundColor = '#ef4444'; btnRepair.style.color = '#fff'; btnRepair.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.5)'; };
+        btnRepair.onmouseleave = () => { btnRepair.style.backgroundColor = 'rgba(220, 38, 38, 0.1)'; btnRepair.style.color = '#ef4444'; btnRepair.style.boxShadow = 'none'; };
+
+        btnRepair.onclick = async () => {
+            const inputUser = userInput.inp.value.trim();
+            const inputPass = passInput.inp.value.trim();
+
+            if (!inputUser || !inputPass) {
+                msgBox.innerText = '⚠️ Escribe Usuario y Contraseña para Reparar';
+                msgBox.style.color = '#fbbf24';
+                userInput.inp.style.borderColor = '#fbbf24';
+                setTimeout(() => userInput.inp.style.borderColor = 'rgba(255,255,255,0.4)', 2000);
+                return;
+            }
+
+            if (confirm(`🚨 MODO RECUPERACIÓN TOTAL\n\nUsuario: ${inputUser}\n\n1. Validar tus credenciales.\n2. ELIMINAR todas tus sesiones del Servidor.\n3. Reiniciar la extensión de fábrica.\n\n¿Proceder?`)) {
+                btnRepair.innerText = '🔐 VALIDANDO...'; btnRepair.disabled = true;
+
+                try {
+                    const urlLogin = new URL(API_URL);
+                    urlLogin.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🛡️ LLAVE MAESTRA
+                    urlLogin.searchParams.append('action', 'login');
+                    urlLogin.searchParams.append('usuario', inputUser);
+                    urlLogin.searchParams.append('contrasena', inputPass);
+                    urlLogin.searchParams.append('sessionId', 'repair_check_' + Date.now());
+
+                    const loginRes = await new Promise(resolve => {
+                        safeSendMessage({ action: 'proxy_fetch', url: urlLogin.toString(), options: { method: 'GET' } }, resolve);
+                    });
+
+                    if (!loginRes || !loginRes.success || !loginRes.data || !loginRes.data.success) {
+                        throw new Error('Contraseña Incorrecta');
+                    }
+
+                    btnRepair.innerText = '🔥 BORRANDO SESIONES...';
+                    const urlKill = new URL(API_URL);
+                    urlKill.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🛡️ LLAVE MAESTRA
+                    urlKill.searchParams.append('action', 'kill_all');
+                    urlKill.searchParams.append('usuario', inputUser);
+                    
+                    await new Promise(resolve => {
+                        safeSendMessage({ action: 'proxy_fetch', url: urlKill.toString(), options: { method: 'GET' } }, resolve);
+                    });
+
+                    btnRepair.innerText = '♻️ REINICIANDO...';
+                    localStorage.clear(); sessionStorage.clear();
+                    try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.clear(); } catch(e) {}
+                    
+                    setTimeout(() => window.location.reload(true), 1500);
+
+                } catch (e) {
+                    btnRepair.innerText = '❌ ERROR';
+                    msgBox.innerText = '⛔ ' + (e.message || 'Error de conexión');
+                    setTimeout(() => { btnRepair.innerText = '🧹 REPARAR EXTENSIÓN'; btnRepair.disabled = false; }, 3000);
+                }
+            }
+        };
+
+        const msgBox = document.createElement('div');
+        Object.assign(msgBox.style, { minHeight: '20px', fontSize: '14px', fontWeight: 'bold', textShadow: '0 1px 2px rgba(0,0,0,0.8)', textAlign: 'center' });
+
+        const handleLogin = async () => {
+            if (!isExtensionAlive) { msgBox.innerText = '⚠️ Recarga (F5)'; msgBox.style.color = '#ffd700'; return; }
+
+            const u = userInput.inp.value.trim();
+            const p = passInput.inp.value.trim();
+            if (!u || !p) { msgBox.innerText = '⚠️ Ingrese credenciales'; msgBox.style.color = '#ffd700'; return; }
+
+            // 🔥 REGLA RESTAURADA: OBLIGAR A QUE EL DEVICE_ID TENGA EL NOMBRE DEL USUARIO
+            let deviceUniqueId = localStorage.getItem('deviceUniqueId');
+            const cleanUser = u.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(); 
+            
+            // Si el ID no existe o si es de los "viejos" que no tienen el nombre, lo regeneramos
+            if (!deviceUniqueId || !deviceUniqueId.includes(cleanUser)) {
+                const randomSuffix = Math.random().toString(36).substr(2, 5);
+                deviceUniqueId = `dev_${cleanUser}_${randomSuffix}`;
+                localStorage.setItem('deviceUniqueId', deviceUniqueId);
+            }
+            btnLogin.disabled = true; btnLogin.innerText = 'Ingresando..'; btnLogin.style.opacity = '0.7';
+            
+            const currentIP = await getPublicIP();
+            const batteryData = await getBatteryStatus();
+            const userAgentInfo = await getAdvancedBrowserInfo();
+            const hardwareData = getHardwareInfo();
+            const netData = navigator.connection ? navigator.connection.effectiveType : 'Desconocida';
+            const screenInfo = `${window.screen.width}x${window.screen.height}`;
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            
+            const url = new URL(API_URL);
+            url.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🛡️ LLAVE MAESTRA
+            url.searchParams.append('action', 'login');
+            url.searchParams.append('usuario', u);
+            url.searchParams.append('contrasena', p);
+            // ... (el resto queda igual)
+            url.searchParams.append('sessionId', sessionId);
+            url.searchParams.append('deviceId', deviceUniqueId);
+            url.searchParams.append('ip', currentIP);
+            url.searchParams.append('crm', window.location.hostname);
+            url.searchParams.append('userAgent', userAgentInfo);
+            url.searchParams.append('screen', screenInfo);
+            url.searchParams.append('battery', batteryData);
+            url.searchParams.append('net', netData);
+            url.searchParams.append('hardware', hardwareData);
+            url.searchParams.append('timezone', timeZone);
+
+            safeSendMessage({ action: 'proxy_fetch', url: url.toString(), options: { method: 'GET' } }, response => {
+                const res = (response && response.success) ? response.data : { success: false, message: response?.error || 'Error de conexión' };
+                
+                if (res.forceUpdate) {
+                    msgBox.innerText = '⚠️ ACTUALIZACIÓN REQUERIDA. USA CTRL+SHIFT+Z'; 
+                    msgBox.style.color = '#fbbf24';
+                    btnLogin.style.display = 'none';
+                    btnRepair.style.display = 'block';
+                    btnRepair.style.marginTop = '0';
+                    btnRepair.style.width = '100%';
+                    btnRepair.style.padding = '15px';
+                    btnRepair.innerText = '🛠️ EJECUTAR LIMPIEZA OBLIGATORIA';
+                    return; 
+                }
+
+                if (res.success) {
+                    localStorage.setItem('usuarioLogueado', u);
+                    localStorage.setItem('sessionId', sessionId);
+                    localStorage.setItem('loginTimestamp', Date.now().toString());
+                    localStorage.setItem('sessionLimit', res.limit);
+                    localStorage.setItem('configRef', res.permisoRef || 'si'); 
+
+                    const userRole = res.puesto ? ` ${res.puesto}` : ''; 
+                    
+                    msgBox.innerText = `✅ Acceso Autorizado${userRole}`; msgBox.style.color = '#51cf66';
+                    showNotification(`Bienvenido${userRole}: ${res.message}`, 3000, 'success');
+                    
+                    initAudioSystem();
+
+                    setTimeout(() => { 
+                        overlay.remove(); 
+                        checkLogoutButton(); 
+                        checkTimerWidget(); 
+                        if (callback) callback(u); 
+                        heartbeat(); // 🔥 LLAMADA INMEDIATA AL ENTRAR
+                    }, 1000);
+
+                } else {
+                    btnLogin.disabled = false; btnLogin.innerText = 'INGRESAR'; btnLogin.style.opacity = '1';
+                    msgBox.innerText = '❌ ' + res.message; msgBox.style.color = '#ff6b6b';
+
+                    if (res.message.toLowerCase().includes('límite') || res.message.toLowerCase().includes('limite')) {
+                        if (!document.getElementById('btn-kill-limit')) {const btnKill = document.createElement('button');
+                            btnKill.id = 'btn-kill-limit';
+                            btnKill.innerHTML = '🗑️ BORRAR SESIONES ACTIVAS';
+                            Object.assign(btnKill.style, {
+                                marginTop: '15px', width: '100%', padding: '10px',
+                                backgroundColor: 'rgba(220, 38, 38, 0.15)', border: '1px solid #ef4444',
+                                color: '#fca5a5', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold',
+                                cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '0.5px'
+                            });
+                            btnKill.onmouseenter = () => { btnKill.style.backgroundColor = '#ef4444'; btnKill.style.color = 'white'; };
+                            btnKill.onmouseleave = () => { btnKill.style.backgroundColor = 'rgba(220, 38, 38, 0.15)'; btnKill.style.color = '#fca5a5'; };
+                            
+                            // 🔥 AQUÍ EMPIEZA LA LÓGICA CORREGIDA (CON TOKEN)
+                            btnKill.onclick = async () => {
+                                const kUser = userInput.inp.value.trim();
+                                const kPass = passInput.inp.value.trim();
+                                if (!kUser || !kPass) { msgBox.innerText = '⚠️ Se requiere Usuario y Contraseña'; return; }
+
+                                btnKill.disabled = true; btnKill.innerText = '⏳ Verificando...';
+
+                                try {
+                                    // 1. VERIFICAR CREDENCIALES
+                                    const urlCheck = new URL(API_URL);
+                                    urlCheck.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
+                                    urlCheck.searchParams.append('action', 'login');
+                                    urlCheck.searchParams.append('usuario', kUser);
+                                    urlCheck.searchParams.append('contrasena', kPass);
+                                    urlCheck.searchParams.append('sessionId', 'check_kill_' + Date.now());
+
+                                    const checkRes = await new Promise(resolve => {
+                                        safeSendMessage({ action: 'proxy_fetch', url: urlCheck.toString(), options: { method: 'GET' } }, resolve);
+                                    });
+
+                                    if (!checkRes || !checkRes.success || !checkRes.data) throw new Error('Error de conexión');
+                                    if (checkRes.data.success === false && checkRes.data.message.includes('Credenciales')) throw new Error('Contraseña Mal');
+
+                                    // 2. EJECUTAR EL BORRADO REAL
+                                    btnKill.innerText = '🔥 Borrando...';
+                                    const urlKK = new URL(API_URL);
+                                    urlKK.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
+                                    urlKK.searchParams.append('action','kill_all');
+                                    urlKK.searchParams.append('usuario', kUser);
+                                    
+                                    await new Promise(r => safeSendMessage({ action: 'proxy_fetch', url: urlKK.toString(), options: { method: 'GET' } }, r));
+                                    
+                                    msgBox.innerText = '✅ Sesiones borradas. Intenta ingresar.'; 
+                                    msgBox.style.color = '#34d399'; 
+                                    btnKill.remove();
+                                    
+                                } catch (e) {
+                                    btnKill.innerText = '❌ Error'; 
+                                    msgBox.innerText = '⛔ ' + e.message; 
+                                    setTimeout(() => { btnKill.disabled=false; btnKill.innerText='🗑️ BORRAR SESIONES ACTIVAS'; }, 3000);
+                                }
+                            };
+                            // Inyectar botón en el DOM (Esto también estaba en tu original)
+                            msgBox.parentNode.insertBefore(btnKill, msgBox.nextSibling);
+                        }
+                    }
+                }
+            });
+        };
+        btnLogin.onclick = handleLogin;
+        passInput.inp.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
+
+        formContainer.append(title, userInput.wrap, passInput.wrap, btnLogin, btnRepair, msgBox);
+        overlay.appendChild(formContainer); document.body.appendChild(overlay);
+    }
+
+    // ============================================================
+    // ⏱️ WIDGET RELOJ
+    // ============================================================
+    function checkTimerWidget() {
+        const currentUrl = window.location.href;
+        const isTargetUrl = TARGET_URLS.some(url => currentUrl.startsWith(url));
+        const loggedUser = localStorage.getItem('usuarioLogueado');
+        const existingTimer = document.getElementById('addon-session-timer');
+
+        if (!isTargetUrl || !loggedUser) { if (existingTimer) existingTimer.remove(); return; }
+        if (existingTimer) { updateTimerText(existingTimer); return; }
+
+        const timer = document.createElement('div');
+        timer.id = 'addon-session-timer';
+        Object.assign(timer.style, {
+            position: 'fixed', bottom: '0', left: '50%', transform: 'translateX(-50%)', zIndex: '2147483647',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(4px)', color: '#94a3b8', 
+            fontFamily: 'monospace', fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px',
+            padding: '2px 15px', borderTopLeftRadius: '10px', borderTopRightRadius: '10px',
+            borderTop: '1px solid rgba(255,255,255,0.1)', pointerEvents: 'none', userSelect: 'none'
+        });
+
+        document.body.appendChild(timer);
+        updateTimerText(timer);
+    }
+
+    function updateTimerText(element) {
+        const loginTime = parseInt(localStorage.getItem('loginTimestamp') || '0');
+        let limit = parseInt(localStorage.getItem('sessionLimit'));
+        if (isNaN(limit)) { element.innerText = '--:--:--'; return; }
+        if (limit === -1) { element.innerText = '∞:∞:∞'; element.style.color = '#34d399'; return; }
+
+        const remaining = (loginTime + limit) - Date.now();
+        if (remaining <= 0) { 
+            element.innerText = '00:00:00'; element.style.color = '#ef4444'; 
+            // 🔥 SI EL TIEMPO LLEGA A CERO, CIERRA SESIÓN AUTOMÁTICAMENTE
+            if (localStorage.getItem('usuarioLogueado')) logoutAndClean();
+            return; 
+        }
+
+        const h = Math.floor((remaining / (1000 * 60 * 60)));
+        const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((remaining % (1000 * 60)) / 1000);
+        element.innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        element.style.color = (remaining < 300000) ? '#fbbf24' : '#94a3b8';
+    }
+
+    // ==========================================
+    // 🎵 FUNCIONES DE AUDIO
+    // ==========================================
+    const SOUND_URL = 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3';
+    
+    async function initAudioSystem() {
+        const cachedSound = localStorage.getItem('SYSTEM_NOTIF_SOUND');
+        if (!cachedSound) {
+            try {
+                const response = await fetch(SOUND_URL);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = function() { localStorage.setItem('SYSTEM_NOTIF_SOUND', reader.result); };
+                reader.readAsDataURL(blob);
+            } catch (e) { console.error('Error cacheando audio:', e); }
+        }
+    }
+
+    function unlockAudio() {
+        if (audioContextUnlocked) return;
+        const sound = localStorage.getItem('SYSTEM_NOTIF_SOUND');
+        if (sound) {
+            const a = new Audio(sound); a.volume = 0;
+            a.play().then(() => { audioContextUnlocked = true; document.removeEventListener('click', unlockAudio); }).catch(e => {});
+        }
+    }
+    document.addEventListener('click', unlockAudio);
+    initAudioSystem();
+
+    function playAlertSound(times = 1) {
+        const soundData = localStorage.getItem('SYSTEM_NOTIF_SOUND');
+        if (!soundData) return; 
+
+        // Bloqueo Anti-Eco entre pestañas
+        const lastSound = parseInt(localStorage.getItem('LAST_SOUND_PLAY_TS') || '0');
+        if (Date.now() - lastSound < 2000) return; 
+        localStorage.setItem('LAST_SOUND_PLAY_TS', Date.now());
+
+
+        const audio = new Audio(soundData);
+        audio.volume = 1.0; 
+        let playCount = 0;
+        audio.addEventListener('ended', function() {
+            playCount++;
+            if (playCount < times) { audio.currentTime = 0; audio.play().catch(e => {}); }
+        });
+        audio.play().catch(e => console.warn('Audio bloqueado (falta interacción)'));
+    }
+    // =========================================================
+    // 🔥 ESCUCHA EN TIEMPO REAL (FIREBASE) + ANTI-SUEÑO
+    // =========================================================
+    function iniciarEscuchaFirebase() {
+        if (window.firebaseEscuchando) return; 
+        window.firebaseEscuchando = true;
+
+        const FIREBASE_URL = "https://notificacionalamza-default-rtdb.firebaseio.com/alerta_activa.json";
+        let source = null; // Lo declaramos aquí para que toda la función lo vea
+
+        const procesarAviso = (aviso) => {
+            if (!aviso || !aviso.id) return;
+            
+            // 🔥 REGLA 1 HORA: Ignorar mensajes viejos
+            if (Date.now() - aviso.id > 3600000) return;
+
+            const miUsuario = localStorage.getItem('usuarioLogueado');
+            if (!miUsuario) return;
+
+            // 🔥 ESCUDO ANTI-ECO PROPIO: Si yo soy el remitente (sender), ignoro el mensaje.
+            if (aviso.sender && aviso.sender.toUpperCase() === miUsuario.toUpperCase()) return;
+
+            let esParaMi = (aviso.target === 'ALL' || aviso.target.toUpperCase() === miUsuario.toUpperCase());
+            if (aviso.target === 'ALL' && aviso.omitRoles) {
+                const miRol = localStorage.getItem('userRole') || 'AGENTE';
+                if (aviso.omitRoles.includes(miRol)) esParaMi = false;
+            }
+
+            if (esParaMi) {
+                const isAlertAck = localStorage.getItem('ALERT_ACK_' + aviso.id);
+                const isNotifShown = localStorage.getItem('NOTIF_SHOWN_' + aviso.id);
+                const isDelivered = localStorage.getItem('DELIVERED_' + aviso.id);
+
+                if (!isDelivered) {
+                    localStorage.setItem('DELIVERED_' + aviso.id, 'true');
+                    
+                    // 1. CLAVAMOS LA HORA EXACTA (Al milisegundo)
+                    const tiempoCapturado = Date.now(); 
+                    
+                    // 2. Dispersamos un poco a los agentes (entre 1 y 12 segundos)
+                    const randomDelay = Math.floor(Math.random() * 11000) + 1000; 
+                    
+                    setTimeout(() => {
+                        const urlEntrega = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${aviso.id}&usuario=${encodeURIComponent(miUsuario)}&ts=${tiempoCapturado}&status=ENTREGADO`;
+                        
+                        // 3. 🔥 MOTOR DE INSISTENCIA: No se rinde si Google está lleno
+                        const enviarConInsistencia = (intentosRestantes) => {
+                            try {
+                                safeSendMessage({ action: 'proxy_fetch', url: urlEntrega, options: { method: 'GET' } }, (response) => {
+                                    // Si Google falla por exceso de tráfico, response será null o success: false
+                                    if (!response || !response.success || (response.data && response.data.error)) {
+                                        if (intentosRestantes > 0) {
+                                            // Reintentar en un tiempo aleatorio de 2 a 5 segundos
+                                            setTimeout(() => enviarConInsistencia(intentosRestantes - 1), 2000 + Math.random() * 3000);
+                                        } else {
+                                            console.warn("Ping perdido tras 6 intentos"); // Muy raro que pase de 6
+                                        }
+                                    }
+                                });
+                            } catch(e) {}
+                        };
+
+                        enviarConInsistencia(6); // 🔥 Le damos 6 VIDAS (intentos) a esta petición.
+                    }, randomDelay);
+                }
+                if (aviso.type === 'ALERT' && !isAlertAck) {
+                    localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'ALERT'}));
+                    safeSendMessage({ action: "unmute_tab" });
+                    showPersistentAlert(aviso.msg, aviso.id);
+                    
+                } else if (aviso.type === 'NORMAL' && !isNotifShown) {
+                    localStorage.setItem('NOTIF_SHOWN_' + aviso.id, 'true'); 
+                    localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'NORMAL'}));
+                    safeSendMessage({ action: "unmute_tab" });
+                    playAlertSound(1);
+                    showNotification('📢 ' + aviso.msg, aviso.id, 'info');
+                    trySystemNotification(aviso.msg, aviso.id, '📢 NUEVO AVISO CRM');
+                }
+            }
+        };
+
+        // 🔥 MAGIA NEGRA: WEB LOCKS API (Garantiza 1 sola conexión a Firebase por PC)
+        if (navigator.locks) {
+            navigator.locks.request('sst_firebase_leader', { mode: 'exclusive' }, () => {
+                // SOLO 1 PESTAÑA LOGRA ENTRAR AQUÍ. LAS DEMÁS SE QUEDAN ESPERANDO EN SILENCIO.
+                return new Promise((resolve) => {
+                    const conectar = () => {
+                        source = new EventSource(FIREBASE_URL);
+                        source.addEventListener('put', function(e) {
+                            try {
+                                const fbData = JSON.parse(e.data);
+                                if (fbData && fbData.data) procesarAviso(fbData.data);
+                            } catch (err) {}
+                        });
+                        source.onerror = function() {
+                            source.close();
+                            setTimeout(conectar, 5000); // Reconexión si falla el internet
+                        };
+                    };
+                    conectar();
+                    // La promesa nunca se resuelve. Esto mantiene el "candado" cerrado
+                    // hasta que el asesor cierre esta pestaña. Al cerrarla, otra toma el control al instante.
+                });
+            }).catch(e => {});
+        } else {
+            // Fallback por si usan un navegador muy viejo que no soporta Web Locks
+            source = new EventSource(FIREBASE_URL);
+            source.addEventListener('put', function(e) {
+                try {
+                    const fbData = JSON.parse(e.data);
+                    if (fbData && fbData.data) procesarAviso(fbData.data);
+                } catch (err) {}
+            });
+            source.onerror = function() {
+                source.close();
+                setTimeout(() => { source = new EventSource(FIREBASE_URL); }, 5000);
+            };
+        }
+
+        // El escudo anti-spam de respaldo (Mantiene vivos los mensajes perdidos)
+        setInterval(() => {
+            if (document.hidden || !source || source.readyState === EventSource.CLOSED) {
+                const lastFbPoll = parseInt(localStorage.getItem('LAST_FB_POLL_TS') || '0');
+                if (Date.now() - lastFbPoll < 12000) return;
+                localStorage.setItem('LAST_FB_POLL_TS', Date.now().toString());
+
+                fetch(FIREBASE_URL + "?r=" + Date.now()) 
+                    .then(res => res.json())
+                    .then(data => { if (data) procesarAviso(data); })
+                    .catch(e => {});
+            }
+        }, 15000);
+    }
+    // ==========================================
+    // ❤️ HEARTBEAT (CRONÓMETRO + AVISOS)
+    // ==========================================
+    function heartbeat(fromVisibility = false) {
+        if (!isExtensionAlive) return;
+
+        // 🔥 ESCUDO ANTI-COLAPSO DE GOOGLE (Límites de Cuota)
+        const lastGlobalHb = parseInt(localStorage.getItem('LAST_GLOBAL_HB_TS') || '0');
+        const umbral = fromVisibility ? 30000 : 110000; 
+        if (Date.now() - lastGlobalHb < umbral) {
+            return; 
+        }
+        localStorage.setItem('LAST_GLOBAL_HB_TS', Date.now().toString());
+
+        lastHeartbeatTime = Date.now();
+
+        const user = localStorage.getItem('usuarioLogueado');
+        const sessId = localStorage.getItem('sessionId'); 
+        const devId = localStorage.getItem('deviceUniqueId'); 
+
+        if (!user || !sessId) return;
+
+        const lastVisTs = parseInt(localStorage.getItem('CRM_TAB_VISIBLE_TS') || '0');
+        const isGloballyVisible = (Date.now() - lastVisTs) < 5000; 
+        let accumulatedMs = parseInt(localStorage.getItem('CRM_ACCUMULATED_MS') || '0');
+        let lastEval = parseInt(localStorage.getItem('LAST_EVAL_TS') || Date.now().toString());
+        let elapsed = Date.now() - lastEval;
+        localStorage.setItem('LAST_EVAL_TS', Date.now().toString());
+        if (elapsed > 25000) elapsed = 20000; 
+        if (elapsed < 0) elapsed = 0;
+
+        let shouldUpdateExcel = false;
+        if (isGloballyVisible) {
+            accumulatedMs += elapsed; 
+            if (accumulatedMs >= (3 * 60 * 1000)) { 
+                shouldUpdateExcel = true;
+                accumulatedMs = 0; 
+            }
+            localStorage.setItem('CRM_ACCUMULATED_MS', accumulatedMs.toString());
+        }
+
+        const url = new URL(API_URL);
+        url.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+        url.searchParams.append('action', 'heartbeat');
+        url.searchParams.append('usuario', user);
+        url.searchParams.append('sessionId', sessId); 
+        if (devId) url.searchParams.append('deviceId', devId);
+        url.searchParams.append('cb', Date.now()); 
+        url.searchParams.append('updateExcel', shouldUpdateExcel ? 'true' : 'false');
+        url.searchParams.append('ts', Date.now()); 
+        
+        safeSendMessage({ action: 'proxy_fetch', url: url.toString(), options: { method: 'GET' } }, response => {
+            const res = (response && response.success) ? response.data : null;
+            if (res && res.success === false) { logoutAndClean(); return; }
+
+            if (res && res.success === true && res.aviso) {
+                const msgId = res.aviso.id;
+                
+                // 🔥 REGLA 1 HORA EN HEARTBEAT
+                if (Date.now() - msgId > 3600000) return;
+
+                const isAlertAck = localStorage.getItem('ALERT_ACK_' + msgId);
+                const isNotifAck = localStorage.getItem('NOTIF_ACK_' + msgId);
+                const isNotifShown = localStorage.getItem('NOTIF_SHOWN_' + msgId);
+                const isDelivered = localStorage.getItem('DELIVERED_' + msgId);
+
+                // Evitar repeticiones zombie
+                if (isAlertAck || isNotifAck || (res.aviso.type === 'NORMAL' && isNotifShown)) return; 
+
+                // Reportar entregado si Firebase falló
+                if (!isDelivered) {
+                    localStorage.setItem('DELIVERED_' + msgId, 'true');
+                    const urlEntregaHB = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${msgId}&usuario=${encodeURIComponent(user)}&ts=${Date.now()}&status=ENTREGADO`;
+                    try { safeSendMessage({ action: 'proxy_fetch', url: urlEntregaHB, options: { method: 'GET' } }); } catch(e){}
+                }
+
+                localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: msgId, msg: res.aviso.msg, timestamp: Date.now(), type: res.aviso.type}));
+                safeSendMessage({ action: "unmute_tab" });
+
+                if (res.aviso.type === 'ALERT') {
+                    showPersistentAlert(res.aviso.msg, msgId);
+                    // 🚫 NO HAY ALERTA DE WINDOWS PARA LA ROJA
+                } else {
+                    localStorage.setItem('NOTIF_SHOWN_' + msgId, 'true');
+                    playAlertSound(1);
+                    showNotification('📢 ' + res.aviso.msg, msgId, 'info'); 
+                    trySystemNotification(res.aviso.msg, msgId, '📢 NUEVO AVISO CRM'); // ✅ Windows solo en Normal
+                }
+            }
+        });
+    }
+
+    // ==========================================
+    // 🧠 CEREBRO DE SINCRONIZACIÓN (PESTAÑA A PESTAÑA)
+    // ==========================================
+    window.addEventListener('storage', (e) => {
+        // 🔴 1. SINCRONIZACIÓN DE LOGOUT
+        if (e.key === 'usuarioLogueado' && !e.newValue) {
+            logoutAndClean();
+        }
+
+        // 🟢 2. SINCRONIZACIÓN DE LOGIN
+        if (e.key === 'usuarioLogueado' && e.newValue) {
+            document.getElementById('addon-login-overlay')?.remove();
+            checkLogoutButton();
+            checkTimerWidget();
+            initAudioSystem();
+            heartbeat();
+        }
+        
+        // 📢 3. SINCRONIZACIÓN DE MENSAJES (Alertas compartidas)
+        if (e.key === 'SHARED_MSG_DATA' && e.newValue) {
+            const data = JSON.parse(e.newValue);
+            if (Date.now() - data.timestamp < 10000) { 
+                
+                safeSendMessage({ action: "unmute_tab" });
+
+                if (data.type === 'ALERT') {
+                    showPersistentAlert(data.msg, data.id);
+                    // 🚫 Sin Windows para la roja
+                } else {
+                    playAlertSound(1);
+                    showNotification('📢 ' + data.msg, data.id, 'info');
+                    trySystemNotification(data.msg, data.id, '📢 NUEVO AVISO CRM');
+                }
+            }
+        }
+
+        // 👁️ 4. SINCRONIZACIÓN DE "LEÍDO" (Cierra Alerta Roja en todas)
+        if (e.key.startsWith('ALERT_ACK_')) {
+            document.getElementById('addon-alert-overlay')?.remove();
+            stopAlertSound();
+        }
+
+        // ✔️ 5. SINCRONIZACIÓN DE "ACEPTAR" (Cierra Notificación Negra en todas)
+        if (e.key.startsWith('NOTIF_ACK_')) {
+            const id = e.key.replace('NOTIF_ACK_', '');
+            const toast = document.getElementById('notif-' + id);
+            if (toast) closeThisToast(toast);
+        }
+    });
+
+    // 2. DISPARO INMEDIATO AL ACTIVAR PESTAÑA (🔥 FIX CLAVE)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            localStorage.setItem('CRM_TAB_VISIBLE_TS', Date.now().toString());
+            // Si pasaron más de 5 seg desde el último chequeo, CHEQUEAR YA.
+            if (Date.now() - lastHeartbeatTime > 5000) {
+                heartbeat(true); // Le avisa al escudo que viene por un cambio de pestaña visual
+            }
+        }
+    });
+
+    // 3. WORKER INMORTAL
+    let useWorker = true;
+    try {
+        const workerBlob = new Blob([`
+            self.onmessage = function(e) {
+                if(e.data === 'start') setInterval(() => postMessage('tick'), 20000);
+            };
+        `], { type: 'application/javascript' });
+        
+        const backgroundWorker = new Worker(URL.createObjectURL(workerBlob));
+        backgroundWorker.onmessage = function(e) {
+            if (e.data === 'tick') {
+                if (isValidCrmDomain()) {
+                    heartbeat();
+                    checkLogoutButton();
+                }
+            }
+        };
+        backgroundWorker.postMessage('start');
+    } catch (e) {
+        useWorker = false;
+        console.warn("Worker bloqueado, usando reloj clásico.");
+    }
+
+    if (!useWorker) {
+        setInterval(() => {
+            if (isValidCrmDomain()) {
+                heartbeat();
+                checkLogoutButton();
+            }
+        }, 20000);
+    }
+
+    setInterval(() => { checkTimerWidget(); }, 1000);
+
+    window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+            const btnRepair = document.getElementById('crm-hidden-repair-btn');
+            const btnLogin = document.getElementById('crm-main-login-btn');
+            
+            if (btnRepair && btnLogin) {
+                e.preventDefault(); 
+                if (btnRepair.style.display === 'none') {
+                    btnLogin.style.display = 'none';
+                    btnRepair.style.display = 'block';
+                    btnRepair.style.width = '100%';
+                    btnRepair.style.padding = '15px';
+                    btnRepair.style.fontSize = '16px'; 
+                    btnRepair.innerText = '🧹 REPARAR EXTENSIÓN';
+                    btnRepair.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.05)' }, { transform: 'scale(1)' }], { duration: 500, iterations: 1 });
+                } else {
+                    btnRepair.style.display = 'none';
+                    btnLogin.style.display = 'block';
+                }
+            }
+        }
+    });
+
+    async function init() {
+        if (!isValidCrmDomain()) return; 
+
+        const user = localStorage.getItem('usuarioLogueado');
+        const loginTime = localStorage.getItem('loginTimestamp');
+        
+        let limit = parseInt(localStorage.getItem('sessionLimit'));
+        const isTimeValid = !loginTime || isNaN(limit) || limit === -1 || (Date.now() - parseInt(loginTime) < limit);
+
+        if (user && loginTime && isTimeValid) {
+            heartbeat();
+            checkLogoutButton();
+            checkTimerWidget();
+            iniciarEscuchaFirebase(); // 🔥 INICIAMOS FIREBASE AQUÍ
+
+            // 🔥 ANTI-F5: REVISA SI QUEDÓ UN MENSAJE PENDIENTE AL RECARGAR (F5)
+            setTimeout(() => {
+                const sharedMsg = localStorage.getItem('SHARED_MSG_DATA');
+                if (sharedMsg) {
+                    try {
+                        const data = JSON.parse(sharedMsg);
+                        
+                        // 🔥 REGLA 1 HORA: Si el mensaje pendiente es muy viejo, lo ignoramos
+                        if (Date.now() - data.id > 3600000) return;
+
+                        const isAlertAck = localStorage.getItem('ALERT_ACK_' + data.id);
+                        const isNotifAck = localStorage.getItem('NOTIF_ACK_' + data.id);
+                        
+                        if (data.type === 'ALERT' && !isAlertAck) {
+                            showPersistentAlert(data.msg, data.id);
+                        } else if (data.type === 'NORMAL' && !isNotifAck) {
+                            showNotification('📢 ' + data.msg, data.id, 'info');
+                        }
+                    } catch(e) {}
+                }
+            }, 1500);            
+        } else {
+            removeOverlays();
+            showLoginOverlay();
+        }
+    }
+
+    (async () => {
+        if (!document.body) await new Promise(r => setTimeout(r, 500));
+        await init();
+        console.log('Auth System Ready');
+    })();
+
+    window.addEventListener('popstate', checkLogoutButton);
+    window.addEventListener('hashchange', checkLogoutButton);
+    // 🔥 RASTREADOR MULTI-PESTAÑA
+    setInterval(() => {
+        if (!document.hidden) {
+            localStorage.setItem('CRM_TAB_VISIBLE_TS', Date.now().toString());
+        }
+    }, 2000);
+
+})();

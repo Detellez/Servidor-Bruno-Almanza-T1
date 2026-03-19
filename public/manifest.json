@@ -1,0 +1,57 @@
+{
+  "manifest_version": 3,
+  "name": "SST Version Completa",
+  "version": "99",
+  "description": "Creado por TELLEZ DANIEL Atajos (Modo rafaga Ctrl + Shirft + x),(Varius plan Ctrl + Shirft + Q).",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "notifications"
+  ],
+  "host_permissions": [
+    "https://co-crm.certislink.com/*",
+    "https://mx-crm.certislink.com/*",
+    "https://*.variousplan.com/*",
+    "https://cl-crm.certislink.com/*",
+    "https://pe-crm.certislink.com/*",
+    "https://*.creddireto.com/*",
+    "https://*.rayodinero.com/*",
+    "https://script.google.com/*"
+  ],
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_icon": "icon.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://co-crm.certislink.com/*",
+        "https://mx-crm.certislink.com/*",
+        "https://*.variousplan.com/*",
+        "https://cl-crm.certislink.com/*",
+        "https://pe-crm.certislink.com/*",
+        "https://*.creddireto.com/*",
+        "https://*.rayodinero.com/*"
+      ],
+"js": [
+  "content_auth.js",        
+  "content_tools.js",       
+  "content_visual_check.js", 
+  "content_listado.js",     
+  "content_detalles.js",    
+  "content_rafaga.js",      
+  "content_social.js",      
+  "content_gsheets.js"      
+],
+      "run_at": "document_end"
+    }
+  ]
+}
