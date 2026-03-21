@@ -4,7 +4,7 @@
     // Variable global para el intervalo de chequeo
     let intervalId = null;
 
-    // 1. CONFIGURACIÓN DE DOMINIOS Y PAÍSES
+    // 1. CONFIGURACIÓN DE DOMINIOS Y PAÍSES (Intacta)
     const CONFIG_CRMS = [{
         prefix: '+57', country: 'Colombia', domains: ['https://co-crm.certislink.com'], digits: 10
     }, {
@@ -73,10 +73,16 @@
             country: 'CRM', prefix: 'GLOBAL'
         };
 
+        // 🔥 AQUÍ ESTÁ EL AJUSTE PARA CASHIMEX 🔥
         const isVarious = currentUrl.includes('variousplan.com');
-        const defaultSelDate = isVarious ? '.el-table_1_column_13' : '.el-table_1_column_12';
-        const defaultSelAction = isVarious ? '.el-table_1_column_23' : '.el-table_1_column_22';
-        const defaultSelRegistry = isVarious ? '.el-table_1_column_20' : '.el-table_1_column_19';
+        const isCashimex = currentUrl.includes('mx-crm.certislink.com');
+
+        // Asignación de columnas respetando a todos
+        const defaultSelDate = (isVarious || isCashimex) ? '.el-table_1_column_13' : '.el-table_1_column_12';
+        const defaultSelAction = (isVarious || isCashimex) ? '.el-table_1_column_23' : '.el-table_1_column_22';
+        const defaultSelRegistry = (isVarious || isCashimex) ? '.el-table_1_column_20' : '.el-table_1_column_19';
+        
+        // El User ID en Cashimex es la 3 (igual que el estándar), Various usa la 2
         const defaultSelUser = isVarious ? '.el-table_1_column_2' : '.el-table_1_column_3';
 
         const getSelectorDate = () => getDynamicColumnSelector(['fecha', 'date', 'time'], defaultSelDate);
@@ -96,7 +102,6 @@
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
             if (isMac) {
-                // 🍎 MODO SEGURO MAC: Pausa real para no ahogar Brave
                 const abrirSeguro = async () => {
                     for (let i = 0; i < buttons.length; i++) {
                         buttons[i].dispatchEvent(new MouseEvent('click', { view: window, bubbles: true, cancelable: true, ctrlKey: false, metaKey: true }));
@@ -105,14 +110,14 @@
                 };
                 abrirSeguro();
             } else {
-                // 🪟 MODO VELOCIDAD DE LA LUZ WINDOWS: Dispara todo de golpe (Tu método original)
                 buttons.forEach((btn, index) => {
                     setTimeout(() => {
                         btn.dispatchEvent(new MouseEvent('click', { view: window, bubbles: true, cancelable: true, ctrlKey: true, metaKey: false }));
-                    }, index * 150); // Lo bajé a 150ms para que sea aún más rápido que antes
+                    }, index * 150); 
                 });
             }
         };
+
         const filterAndOpen = () => {
             const date1 = document.getElementById('input-fecha-1').value.trim().toLowerCase();
             const date2 = document.getElementById('input-fecha-2').value.trim().toLowerCase();
@@ -132,19 +137,14 @@
                 const matchDate = (!date1 && !date2) || (date1 && textDate.includes(date1)) || (date2 && textDate.includes(date2));
                 
                 const cellReg = row.querySelector(selectorRegistry);
-                // Le quitamos los espacios en blanco al inicio y al final por si acaso
                 const textReg = cellReg ? cellReg.innerText.trim().toLowerCase() : '';
                 
-                // 🔥 NUEVA LÓGICA DE BÚSQUEDA EXACTA 🔥
                 let matchReg = false;
                 if (!filterText) {
-                    matchReg = true; // Si no escribiste filtro, pasa de largo
+                    matchReg = true; 
                 } else if (filterText === 'sin seguimiento') {
-                    matchReg = textReg === ''; // Si pones "sin seguimiento", busca los vacíos
+                    matchReg = textReg === ''; 
                 } else {
-                    // 🔥 AQUÍ ESTÁ LA MAGIA: Cambiamos .includes() por ===
-                    // Esto obliga a que el texto de la celda sea EXACTAMENTE igual a lo que escribiste.
-                    // Si escribes "tgm", no abrirá "sin tgm".
                     matchReg = (textReg === filterText); 
                 }
 
@@ -165,9 +165,8 @@
             const counts = {}; 
             const groupedRows = {}; 
             const selectorUser = getSelectorUser();
-            const selectorDate = getSelectorDate(); // 🔥 Traemos el selector de fecha para poder leerlas
+            const selectorDate = getSelectorDate(); 
 
-            // 1. Agrupar por Usuario (Tu lógica original)
             rows.forEach(row => {
                 const cellUser = row.querySelector(selectorUser) || row.querySelectorAll('td')[2];
                 const userId = cellUser ? cellUser.innerText.trim() : '';
@@ -178,120 +177,37 @@
                 }
             });
 
-            // 🔥 NUEVA LÓGICA: Función para comparar fechas de Mayor a Menor (Descendente)
             const sortByDateDesc = (rowA, rowB) => {
                 const cellA = rowA.querySelector(selectorDate);
                 const cellB = rowB.querySelector(selectorDate);
                 const dateA = cellA ? cellA.innerText.trim().toLowerCase() : '';
                 const dateB = cellB ? cellB.innerText.trim().toLowerCase() : '';
-                // localeCompare invirtiendo A y B nos da un orden de Mayor a Menor
                 return dateB.localeCompare(dateA); 
             };
 
             let duplicateGroups = []; 
             let uniques = [];
 
-            // 2. Separar duplicados de únicos y ordenarlos internamente
             Object.keys(groupedRows).forEach(userId => {
                 let userRows = groupedRows[userId];
-                
-                // Ordenamos las filas de este cliente específico por fecha
                 userRows.sort(sortByDateDesc);
 
                 if (counts[userId] > 1) {
-                    duplicateGroups.push(userRows); // Guardamos el grupo entero
+                    duplicateGroups.push(userRows); 
                 } else {
                     uniques.push(userRows[0]);
                 }
             });
 
-            // 3. Ordenar los grupos de duplicados entre sí (basado en la fecha más reciente del grupo)
             duplicateGroups.sort((groupA, groupB) => sortByDateDesc(groupA[0], groupB[0]));
-            
-            // 4. Ordenar los clientes únicos entre sí
             uniques.sort(sortByDateDesc);
 
-            // 5. Aplanar el arreglo de grupos duplicados para que quede como una lista normal
             let duplicates = duplicateGroups.flat();
-
-            // Unimos todo: Duplicados ordenados primero, luego únicos ordenados
             const finalOrder = [...duplicates, ...uniques];
             const selectorAction = getSelectorAction();
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-            // 🧠 1. CALCULAMOS LOS DATOS REALES
-            const totalClientesReales = Object.keys(groupedRows).length;
-            const totalPestanas = finalOrder.length;
-            
-            // Guardamos para que el Perro Guardián lo sepa
-            localStorage.setItem('CRM_TOTAL_CLIENTES_REALES', totalClientesReales);
-            localStorage.setItem('CRM_TOTAL_PESTANAS', totalPestanas);
-
-            // 🎨 2. CREADOR DE LA NOTIFICACIÓN HTML ESTÉTICA (DISCRETA SUPERIOR)
-            const mostrarAlertaEstetica = () => {
-                if (document.getElementById('crm-alerta-fin')) return; 
-                
-                // La tarjeta flotante (eliminamos el fondo oscuro de pantalla completa)
-                const modal = document.createElement('div');
-                modal.id = 'crm-alerta-fin';
-                Object.assign(modal.style, {
-                    position: 'fixed', top: '20px', left: '50%',
-                    transform: 'translate(-50%, -20px) scale(0.9)', // Ligeramente arriba para animar
-                    opacity: '0', backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-                    border: '1px solid rgba(255, 255, 255, 0.15)', padding: '12px 20px', 
-                    borderRadius: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
-                    display: 'flex', alignItems: 'center', gap: '15px',
-                    zIndex: '2147483647', fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-                    color: '#fff', minWidth: '280px', width: 'max-content',
-                    transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                    backdropFilter: 'blur(10px)'
-                });
-
-                // Contenido horizontal compacto
-                modal.innerHTML = `
-                    <div style="font-size: 24px; text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);">✅</div>
-                    <div style="display: flex; flex-direction: column; flex-grow: 1; text-align: left;">
-                        <span style="font-size: 13px; color: #10b981; font-weight: 800; letter-spacing: 0.5px;">APERTURA FINALIZADA</span>
-                        <span style="font-size: 12px; color: #e2e8f0; margin-top: 2px;">
-                            <strong style="color: #fbbf24; font-size: 13px;">${totalPestanas}</strong> pestañas abiertas.
-                        </span>
-                        <span style="font-size: 11px; color: #9ca3af;">
-                            (${totalClientesReales} clientes únicos)
-                        </span>
-                    </div>
-                `;
-
-                // Botón OK pequeño y rápido
-                const btn = document.createElement('button');
-                btn.innerText = 'OK';
-                Object.assign(btn.style, {
-                    backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '8px 16px',
-                    borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
-                    fontSize: '12px', transition: 'all 0.2s', marginLeft: '5px'
-                });
-                
-                btn.onmouseover = () => { btn.style.backgroundColor = '#059669'; btn.style.transform = 'translateY(-1px)'; };
-                btn.onmouseout = () => { btn.style.backgroundColor = '#10b981'; btn.style.transform = 'translateY(0)'; };
-                btn.onmousedown = () => { btn.style.transform = 'scale(0.95)'; };
-                
-                // Acción de cerrar con animación
-                btn.onclick = () => {
-                    modal.style.transform = 'translate(-50%, -20px) scale(0.9)';
-                    modal.style.opacity = '0';
-                    setTimeout(() => modal.remove(), 300);
-                };
-
-                modal.appendChild(btn);
-                document.body.appendChild(modal);
-
-                // Disparar animación de entrada (cae desde arriba al centro)
-                requestAnimationFrame(() => {
-                    modal.style.transform = 'translate(-50%, 0) scale(1)';
-                    modal.style.opacity = '1';
-                });
-            };
             if (isMac) {
-                // 🍎 MODO SEGURO MAC
                 const abrirPestañasSeguro = async () => {
                     for (let i = 0; i < finalOrder.length; i++) {
                         const row = finalOrder[i];
@@ -302,12 +218,9 @@
                         }
                         await new Promise(resolve => setTimeout(resolve, 450));
                     }
-                    // 🚀 Mostramos alerta al terminar el bucle en Mac
-                    mostrarAlertaEstetica();
                 };
                 abrirPestañasSeguro();
             } else {
-                // 🪟 MODO VELOCIDAD DE LA LUZ WINDOWS
                 finalOrder.forEach((row, index) => {
                     setTimeout(() => {
                         const cellAction = row.querySelector(selectorAction + ' span') || 
@@ -315,15 +228,11 @@
                         if (cellAction) {
                             cellAction.dispatchEvent(new MouseEvent('click', { view: window, bubbles: true, cancelable: true, ctrlKey: true, metaKey: false }));
                         }
-                        
-                        // 🚀 Mostramos alerta cuando procese el último elemento en Windows
-                        if (index === finalOrder.length - 1) {
-                            setTimeout(mostrarAlertaEstetica, 400); 
-                        }
-                    }, index * 150);
+                    }, index * 150); 
                 });
             }
         };
+
         // --- INYECCIÓN DEL PANEL ---
 
         function injectPanel() {
@@ -339,35 +248,26 @@
                 pointerEvents: 'none', fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
             });
 
-            // Contenedor del Menú
             const menuContent = document.createElement('div');
             Object.assign(menuContent.style, {
                 pointerEvents: 'auto',
                 backgroundColor: 'rgba(10, 15, 30, 0.75)', 
                 backdropFilter: 'blur(20px)', webkitBackdropFilter: 'blur(20px)',
-                
-                // Espaciado Compacto
-                padding: '12px', 
-                borderRadius: '14px', 
+                padding: '12px', borderRadius: '14px', 
                 display: 'none', flexDirection: 'column', 
-                gap: '6px', 
-                width: '260px', 
-                
+                gap: '6px', width: '260px', 
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 boxShadow: '0 10px 40px rgba(0, 0, 0, 0.6)',
                 position: 'relative', 
-                
                 marginTop: '10px', marginLeft: '10px', 
                 transformOrigin: 'top left'
             });
 
-            // --- LÓGICA PARA OCULTAR PANEL (NUEVO) ---
             const hidePanel = () => {
                 menuContent.style.display = 'none';
                 toggleBtn.style.display = 'flex';
             };
 
-            // Botón de Minimizar
             const minimizeBtn = document.createElement('div');
             minimizeBtn.innerHTML = '×'; minimizeBtn.title = "Ocultar";
             Object.assign(minimizeBtn.style, {
@@ -381,10 +281,8 @@
             minimizeBtn.onmouseenter = () => { minimizeBtn.style.background='rgba(255,255,255,0.25)'; minimizeBtn.style.color='#fff'; minimizeBtn.style.transform='scale(1.1)'; };
             minimizeBtn.onmouseleave = () => { minimizeBtn.style.background='rgba(255,255,255,0.1)'; minimizeBtn.style.color='rgba(255,255,255,0.8)'; minimizeBtn.style.transform='scale(1)'; };
             
-            // Acción cerrar
             minimizeBtn.onclick = hidePanel;
 
-            // Encabezado Compacto
             const headerContent = document.createElement('div');
             headerContent.innerHTML = `
                 <div style="text-align:center; margin-bottom: 2px;">
@@ -399,17 +297,13 @@
             `;
             menuContent.append(minimizeBtn, headerContent);
 
-            // Helper para botones COMPACTOS (MODIFICADO para ocultar panel)
             const createBtn = (text, color, onClick) => {
                 const btn = document.createElement('button');
                 btn.innerText = text; 
-                
-                // 🔥 AQUÍ SE CIERRA EL PANEL AL HACER CLIC
                 btn.onclick = () => {
                     hidePanel();
                     onClick();
                 };
-
                 Object.assign(btn.style, {
                     padding: '7px 5px', width: '100%', fontSize: '12px',
                     borderRadius: '6px', cursor: 'pointer', fontWeight: '700', 
@@ -420,7 +314,6 @@
                 return btn;
             };
 
-            // Grilla Arriba/Abajo
             const grid = document.createElement('div');
             Object.assign(grid.style, { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px', marginBottom: '2px' });
             grid.append(
@@ -429,16 +322,12 @@
             );
             menuContent.appendChild(grid);
 
-            // Botón Abrir Todo Compacto (MODIFICADO)
             const btnOpenAll = document.createElement('button');
             btnOpenAll.innerText = '⚡ ABRIR TODO ⚡';
-            
-            // 🔥 AQUÍ SE CIERRA EL PANEL AL HACER CLIC
             btnOpenAll.onclick = () => {
                 hidePanel();
                 openAll();
             };
-
             Object.assign(btnOpenAll.style, {
                 width: '100%', padding: '7px', borderRadius: '6px', cursor: 'pointer', 
                 fontWeight: '800', fontSize: '12px', marginBottom: '5px', transition: 'all 0.2s'
@@ -446,7 +335,6 @@
             applyDynamicHover(btnOpenAll, '#10b981');
             menuContent.appendChild(btnOpenAll);
 
-            // Inputs Compactos
             const inputStyle = {
                 width: '100%', padding: '6px',
                 borderRadius: '6px', border: '1px solid rgba(255,255,255,0.2)',
@@ -470,15 +358,13 @@
             dateGrid.append(date1, date2);
             menuContent.append(inputFilter, dateGrid);
 
-            // Botón Ejecutar Filtro (Ya usa createBtn modificado)
             const btnFilter = createBtn('🔍 FILTRAR Y ABRIR', '#f59e0b', filterAndOpen);
             menuContent.appendChild(btnFilter);
 
-            // Botón Toggle
             const toggleBtn = document.createElement('div');
             Object.assign(toggleBtn.style, {
                 width: '45px', height: '45px', backgroundColor: 'rgba(10, 15, 30, 0.95)', color: 'white',
-                borderRadius: '0 0 24px 0', // Redondeado abajo-derecha
+                borderRadius: '0 0 24px 0', 
                 display: 'flex', justifyContent: 'flex-start', alignItems: 'flex-start',
                 paddingLeft: '10px', paddingTop: '10px', boxSizing: 'border-box',
                 cursor: 'pointer', fontSize: '22px', fontWeight: 'bold', transition: 'all 0.3s',
@@ -503,7 +389,6 @@
             document.body.appendChild(wrapper);
         }
 
-        // Bucle de verificación
         intervalId = setInterval(() => {
             if (window.location.hash.toLowerCase().includes('pedding_list')) injectPanel();
             else document.getElementById('panel-mixto-crm')?.remove();
