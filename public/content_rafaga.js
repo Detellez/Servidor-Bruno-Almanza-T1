@@ -796,7 +796,7 @@
                     e.stopPropagation(); 
                     const confirmado = await mostrarConfirmacionHTML(
                         '⚠️ ADVERTENCIA DE SISTEMA',
-                        '¿Estás seguro que estás en una <strong style="color:#34d399;">cuenta única</strong> administrada por agente?',
+                        '¿Estás seguro que estás en una <strong style="color:#34d399;">cuenta</strong> administrada por agente?',
                         'Sí, Continuar',
                         '#34d399' 
                     );
