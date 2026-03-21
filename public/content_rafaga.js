@@ -556,7 +556,7 @@
                 position: 'fixed', top: '10vh', left: '50%', transform: 'translateX(-50%)', 
                 width: 'max-content', maxWidth: '96vw', height: 'auto', maxHeight: '80vh', 
                 backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff', borderRadius: '12px', 
-                zIndex: 2147483647, backdropFilter: 'blur(10px)', boxShadow: '0 15px 40px rgba(0,0,0,0.6)', 
+                zIndex: 2147483600, backdropFilter: 'blur(10px)', boxShadow: '0 15px 40px rgba(0,0,0,0.6)', 
                 display: 'none', flexDirection: 'column', border: '1px solid #334155', 
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 
