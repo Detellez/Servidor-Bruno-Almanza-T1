@@ -42,7 +42,7 @@
             const overlay = document.createElement('div');
             Object.assign(overlay.style, {
                 position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483642',
                 display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '20px', backdropFilter: 'blur(5px)',
                 fontFamily: 'system-ui, -apple-system, sans-serif'
             });
@@ -180,8 +180,8 @@
             toast = document.createElement('div');
             toast.id = 'toast-crm-global';
             Object.assign(toast.style, {
-                position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
-                zIndex: 2147483647, backgroundColor: 'rgba(15, 23, 42, 0.95)', color: 'white',
+                position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+                zIndex: 2147483642, backgroundColor: 'rgba(15, 23, 42, 0.95)', color: 'white',
                 padding: '12px 24px', borderRadius: '12px', 
                 fontFamily: "'Segoe UI', sans-serif", fontSize: '13px', lineHeight: '1.4',
                 backdropFilter: 'blur(10px)', transition: 'all 0.3s ease',
@@ -409,7 +409,7 @@
         const currentInfo = detectCountry();
         const wrapper = document.createElement('div');
         wrapper.id = 'wrapper-crm-masivo';
-        Object.assign(wrapper.style, { position: 'fixed', left: '0', top: '0', zIndex: '2147483647', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', pointerEvents: 'none', fontFamily: "'Segoe UI', sans-serif" });
+        Object.assign(wrapper.style, { position: 'fixed', left: '0', top: '0', zIndex: '2147483642', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', pointerEvents: 'none', fontFamily: "'Segoe UI', sans-serif" });
 
         const panel = document.createElement('div');
         panel.id = 'panel-crm-masivo';
