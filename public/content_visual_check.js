@@ -95,7 +95,7 @@
         const panel = document.createElement('div');
         panel.id = 'visor-top-status';
         Object.assign(panel.style, {
-            position: 'fixed', zIndex: 10000, bottom: '1px', left: '50%', transform: 'translateX(-50%)',
+            position: 'fixed', zIndex: '2147483639', bottom: '1px', left: '50%', transform: 'translateX(-50%)',
             backgroundColor: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(12px)', webkitBackdropFilter: 'blur(12px)',
             padding: '10px 20px', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
             border: '1px solid rgba(255, 255, 255, 0.5)', display: 'none', flexDirection: 'column', gap: '4px',
@@ -316,6 +316,27 @@ function scanIframe(searchId, page) {
     }
 
     // 6. INICIALIZACIÓN
+
+    // 🔥 Lector de tabla exclusivo para la pestaña detail3
+    const obtenerValorTablaVarious = (nombreColumna) => {
+        try {
+            const pane = document.getElementById('pane-fourth');
+            if (!pane) return '';
+            const headerWrapper = pane.querySelector('.el-table__header-wrapper');
+            if (!headerWrapper) return '';
+            const headers = Array.from(headerWrapper.querySelectorAll('th .cell'));
+            const index = headers.findIndex(h => (h.textContent || '').trim().toLowerCase().includes(nombreColumna.toLowerCase()));
+            if (index === -1) return '';
+            const bodyWrapper = pane.querySelector('.el-table__body-wrapper');
+            if (!bodyWrapper) return '';
+            const row = bodyWrapper.querySelector('tbody tr'); 
+            if (!row) return '';
+            const cells = Array.from(row.querySelectorAll('td .cell'));
+            if (cells[index]) return (cells[index].textContent || '').trim();
+            return '';
+        } catch(e) { return ''; }
+    };
+
     function init() {
         const currentUrl = window.location.href;
         if (!currentUrl.includes(CONFIG.TARGET_DOMAIN)) return;
@@ -325,28 +346,62 @@ function scanIframe(searchId, page) {
         }
         createStatusPanel();
         
-        setTimeout(() => {
+        setTimeout(async () => {
             const orderId = getOrderIdFromPage('ID de orden');
             
             if (orderId) {
-                // 🔥 VERIFICACIÓN DE CACHÉ (20 HORAS)
+                // VERIFICACION DE CACHE (20 HORAS)
                 const cacheKey = 'VC_CACHE_' + orderId;
                 const cachedRaw = localStorage.getItem(cacheKey);
                 
                 if (cachedRaw) {
                     const cached = JSON.parse(cachedRaw);
                     const edadHoras = (Date.now() - cached.timestamp) / (1000 * 60 * 60);
-                    
                     if (edadHoras < CONFIG.CACHE_HOURS) {
                         updatePanel(cached, orderId, 'cache');
-                        return; // ✅ DATOS ENCONTRADOS EN MEMORIA, NO EJECUTAMOS NADA
+                        return; // DATOS ENCONTRADOS EN MEMORIA
                     }
                 }
 
-                // SI NO HAY CACHÉ: INICIAMOS TODO EL PROCESO
+                // 🔥 LOGICA ULTRARRAPIDA EXCLUSIVA PARA DETAIL3
+                if (currentUrl.includes('/detail3')) {
+                    updatePanel(null, orderId, 'extracting');
+                    
+                    // 1. Extraer User ID de la URL (siempre esta ahi en Variousplan)
+                    let userId = '--';
+                    try {
+                        const hash = window.location.hash;
+                        if (hash.includes('?')) {
+                            const params = new URLSearchParams(hash.split('?')[1]);
+                            userId = params.get('userId') || '--';
+                        }
+                    } catch(e) {}
+
+                    // 2. Extraer Plazo de la tabla inferior
+                    let plazo = obtenerValorTablaVarious('Plazo actual');
+                    if (!plazo) plazo = '--';
+
+                    // 3. Extraer Fecha abriendo el modal
+                    const fechaFinal = await obtenerFechaDesembolso();
+
+                    const dataEncontrada = {
+                        userId: userId,
+                        plazo: plazo,
+                        fechaDesembolso: fechaFinal,
+                        timestamp: Date.now() 
+                    };
+
+                    localStorage.setItem(cacheKey, JSON.stringify(dataEncontrada));
+                    updatePanel(dataEncontrada, orderId, 'success', '(DOM Rápido)');
+                    return; // Terminamos, no usamos el buscador de Iframe lento
+                }
+
+                // SI ES DETAIL2: INICIAMOS EL PROCESO NORMAL DEL IFRAME
                 const currentVal = document.getElementById('v-userid')?.innerText; 
                 if (!currentVal || currentVal === '--') startSearch(orderId);
-            } else updatePanel(null, '...', 'loading', 'init');
+            } else {
+                updatePanel(null, '...', 'loading', 'init');
+            }
         }, 1500);
     }
 
