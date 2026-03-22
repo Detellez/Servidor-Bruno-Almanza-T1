@@ -35,7 +35,7 @@
         .ghost-toast-msg {
             position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-20px);
             padding: 10px 20px; border-radius: 30px; font-family: 'Segoe UI', sans-serif;
-            font-size: 13px; font-weight: 700; color: white; z-index: 2147483647;
+            font-size: 13px; font-weight: 700; color: white; z-index: 2147483644; /* Nivel 4 */
             display: flex; align-items: center; gap: 8px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5); backdrop-filter: blur(10px);
             opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -48,7 +48,7 @@
         /* --- BOTONES LATERALES (SLIDE) --- */
         .side-btn-app {
             position: fixed; left: -42px; width: 55px; height: 45px;
-            z-index: 2147483640; background-color: rgba(15, 23, 42, 0.85); color: rgba(255, 255, 255, 0.8);
+            z-index: 2147483644; /* Nivel 4 */ background-color: rgba(15, 23, 42, 0.85); color: rgba(255, 255, 255, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.15); border-left: none; border-radius: 0 12px 12px 0;
             cursor: pointer; font-weight: bold; font-size: 20px; display: flex; align-items: center;
             justify-content: flex-end; padding-right: 12px; backdrop-filter: blur(8px);
@@ -66,24 +66,24 @@
         #btn-ghost-mode:hover { background-color: rgba(139, 92, 246, 1); box-shadow: 0 0 15px rgba(139, 92, 246, 0.6); }
 
         /* --- VISOR IMÁGENES Y MODALES --- */
-        #visor-id-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.98); z-index: 2147483647; display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; animation: fadeIn 0.2s forwards; }
+        #visor-id-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 5, 0.98); z-index: 2147483646; /* Nivel 6 */ display: flex; flex-direction: column; justify-content: center; align-items: center; opacity: 0; animation: fadeIn 0.2s forwards; }
         @keyframes fadeIn { to { opacity: 1; } }
         #visor-img-container { flex: 1; width: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: grab; }
         #visor-editor-canvas { max-width: 90%; max-height: 80vh; box-shadow: 0 0 50px rgba(0,0,0,0.8); transition: transform 0.05s linear; }
-        #visor-controls-wrapper { position: absolute; bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2147483647; background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px); padding: 10px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); }
+        #visor-controls-wrapper { position: absolute; bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 2147483646; /* Nivel 6 */ background: rgba(30, 30, 30, 0.8); backdrop-filter: blur(15px); padding: 10px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.15); }
         #visor-toolbar { display: flex; gap: 12px; align-items: center; }
         .visor-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #e2e8f0; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; font-size: 20px; display: flex; justify-content: center; align-items: center; transition: 0.2s; }
         .visor-btn:hover { background: rgba(255,255,255,0.2); transform: translateY(-3px); }
         .visor-btn.active { background: #3b82f6; border-color: #3b82f6; }
-        #visor-close { position: absolute; top: 30px; right: 30px; background: rgba(220, 38, 38, 0.8); border: none; color: white; font-size: 24px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; z-index: 2147483647; transition: 0.2s; }
+        #visor-close { position: absolute; top: 30px; right: 30px; background: rgba(220, 38, 38, 0.8); border: none; color: white; font-size: 24px; width: 45px; height: 45px; border-radius: 50%; cursor: pointer; z-index: 2147483646; /* Nivel 6 */ transition: 0.2s; }
         #visor-close:hover { transform: rotate(90deg); background: #dc2626; }
         #tool-options-panel { display: none; gap: 10px; background: rgba(0,0,0,0.6); padding: 8px 15px; border-radius: 20px; }
         #tool-options-panel.visible { display: flex; }
-        #visor-brush-cursor { position: fixed; pointer-events: none; z-index: 2147483647; border-radius: 50%; border: 2px solid white; display: none; transform: translate(-50%, -50%); }
+        #visor-brush-cursor { position: fixed; pointer-events: none; z-index: 2147483646; /* Nivel 6 */ border-radius: 50%; border: 2px solid white; display: none; transform: translate(-50%, -50%); }
         #visor-thumbnails { display: flex; gap: 10px; margin-left: 10px; padding-left: 10px; border-left: 1px solid rgba(255,255,255,0.2); }
         .visor-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
         .visor-thumb.active { border: 2px solid #3b82f6; opacity: 1; transform: scale(1.1); }
-        #manual-search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2147483646; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+        #manual-search-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2147483644; /* Nivel 4 */ display: flex; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
         #manual-search-box { background: #111827; width: 600px; padding: 25px; border-radius: 16px; display: flex; flex-direction: column; gap: 15px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.7); }
         #manual-viewer-frame { width: 100%; height: 400px; background: #000; border-radius: 12px; position: relative; overflow: hidden; display: flex; justify-content: center; align-items: center; cursor: grab; border: 1px solid #374151; }
         #manual-mini-toolbar { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(30, 30, 30, 0.9); padding: 8px 20px; border-radius: 30px; display: flex; gap: 20px; border: 1px solid rgba(255,255,255,0.2); }
@@ -264,7 +264,7 @@
         const wrapper = document.createElement('div');
         wrapper.id = 'social-panel-wrapper';
         Object.assign(wrapper.style, {
-            position: 'fixed', right: '0', bottom: '0', zIndex: 2147483630, 
+            position: 'fixed', right: '0', bottom: '0', zIndex: '2147483644', 
             display: 'flex', flexDirection: 'column-reverse', alignItems: 'flex-end',
             pointerEvents: 'none', fontFamily: "'Segoe UI', sans-serif"
         });
@@ -352,7 +352,7 @@
             cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', 
             transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.2)', 
             boxShadow: '0 4px 10px rgba(0,0,0,0.3)', pointerEvents: 'auto', backdropFilter: 'blur(10px)',
-            zIndex: '2147483646', marginRight: '160px', marginBottom: '5px'
+            zIndex: '2147483644', marginRight: '160px', marginBottom: '5px'
         });
         
         toggleBtn.onmouseenter = () => { 
@@ -451,8 +451,18 @@
         const addBtn = (icon, action, id) => { const btn = document.createElement('button'); btn.className = 'visor-btn'; if(id) btn.id = id; btn.innerHTML = icon; btn.onclick = (e) => { e.stopPropagation(); action(btn); }; toolbar.appendChild(btn); return btn; };
         const setMode = (mode) => {
             vState.mode = mode; document.querySelectorAll('.visor-btn').forEach(b => b.classList.remove('active'));
-            if (mode === 'VIEW') { document.getElementById('btn-view-mode').classList.add('active'); container.style.cursor = 'grab'; document.getElementById('tool-options-panel').classList.remove('visible'); document.getElementById('visor-brush-cursor').style.display = 'none'; } 
-            else { document.getElementById('btn-draw-mode').classList.add('active'); container.style.cursor = 'none'; document.getElementById('tool-options-panel').classList.add('visible'); }
+            if (mode === 'VIEW') { 
+                document.getElementById('btn-view-mode').classList.add('active'); 
+                container.style.cursor = 'grab'; 
+                canvas.style.cursor = 'grab'; 
+                document.getElementById('tool-options-panel').classList.remove('visible'); 
+                document.getElementById('visor-brush-cursor').style.display = 'none'; 
+            } else { 
+                document.getElementById('btn-draw-mode').classList.add('active'); 
+                container.style.cursor = 'default'; // El fondo negro vuelve a ser flecha normal
+                canvas.style.cursor = 'none';       // Solo la imagen esconde el cursor nativo
+                document.getElementById('tool-options-panel').classList.add('visible'); 
+            }
         };
         addBtn('✋', () => setMode('VIEW'), 'btn-view-mode'); addBtn('✏️', () => setMode('DRAW'), 'btn-draw-mode');
         const sep = document.createElement('div'); sep.style.cssText = 'width:1px; height:30px; background:rgba(255,255,255,0.2); margin:0 5px;'; toolbar.appendChild(sep);
