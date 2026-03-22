@@ -4,6 +4,84 @@
     // ==========================================
     // 1. CONFIGURACIÓN
     // ==========================================
+    // 🛡️ INICIO BLINDAJE GLOBAL ANTI-INSPECCIÓN V5 (DEFINITIVO PARA TOOLS) 🛡️
+    const styleBlindaje = document.createElement('style');
+    styleBlindaje.innerHTML = `
+        /* Blindaje absoluto a los contenedores y TODOS sus hijos (*) */
+        [id*="addon"], [id*="addon"] *,
+        [id*="visor"], [id*="visor"] *,
+        [id*="panel"], [id*="panel"] *,
+        [id*="wrapper"], [id*="wrapper"] *,
+        [id*="social"], [id*="social"] *,
+        [id*="manual"], [id*="manual"] *,
+        [id*="tool"], [id*="tool"] *,
+        [id*="plantilla"], [id*="plantilla"] *,
+        [id*="editor"], [id*="editor"] *,
+        [id*="herramientas"], [id*="herramientas"] *,
+        [id*="modal"], [id*="modal"] *,
+        [id*="custom"], [id*="custom"] *,
+        [id*="btn-"], [id*="btn-"] *,
+        [id*="dyn-"], [id*="dyn-"] *,
+        [id*="floating"], [id*="floating"] *,
+        [id*="guide"], [id*="guide"] *,
+        [class*="addon"], [class*="addon"] *,
+        [class*="panel"], [class*="panel"] *,
+        .side-btn-app, .side-btn-app *,
+        .visor-btn, .visor-btn *,
+        .ghost-toast-msg, .ghost-toast-msg *,
+        .btn-copy-tag, .btn-copy-tag * {
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        /* Excepción EXCLUSIVA para inputs y textareas para que puedan escribir */
+        input, textarea {
+            user-select: auto !important;
+            -webkit-user-select: auto !important;
+        }
+    `;
+    document.head.appendChild(styleBlindaje);
+
+    // Bloqueador de Clic Derecho (Radar Ultra-Sensible)
+    document.addEventListener('contextmenu', (e) => {
+        const path = e.composedPath();
+        const esElementoExtension = path.some(el => {
+            if (!el || !el.tagName) return false;
+            
+            // Convertimos a minúsculas para atrapar cualquier variación
+            const id = (el.id || '').toLowerCase();
+            const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
+            
+            // Escaneo nuclear de TODAS tus palabras clave (Añadido modal, custom, btn-, dyn-)
+            return id.includes('addon') || id.includes('visor') || 
+                   id.includes('panel') || id.includes('wrapper') || 
+                   id.includes('social') || id.includes('manual') || 
+                   id.includes('tool') || id.includes('plantilla') || 
+                   id.includes('editor') || id.includes('herramientas') ||
+                   id.includes('modal') || id.includes('custom') || 
+                   id.includes('btn-') || id.includes('dyn-') || 
+                   id.includes('floating') || id.includes('guide') ||
+                   cls.includes('addon') || cls.includes('side-btn') || 
+                   cls.includes('ghost') || cls.includes('visor-btn') || 
+                   cls.includes('panel') || cls.includes('tool') || 
+                   cls.includes('herramientas') || cls.includes('btn-copy-tag');
+        });
+
+        if (esElementoExtension) {
+            // Permitir clic derecho SOLO si el asesor necesita pegar texto en un input
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        }
+    });
+
+    // ⛔ EXTRAS: Bloqueo de Teclado Hacker (F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J)
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'F12' || 
+           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j'))) {
+            e.preventDefault();
+        }
+    });
+    // 🛡️ FIN BLINDAJE GLOBAL V5 🛡️
     const CONFIG_CRMS = [{
         'prefix': '+57', 'country': 'COLOMBIA', 'domains': ['https://co-crm.certislink.com'], 'digits': 10
     }, {
