@@ -242,7 +242,7 @@
             const wrapper = document.createElement('div');
             wrapper.id = 'panel-mixto-crm';
             Object.assign(wrapper.style, {
-                position: 'fixed', left: '0', top: '0', zIndex: '2147483647',
+                position: 'fixed', left: '0', top: '0', zIndex: '2147483641',
                 display: 'flex', flexDirection: 'column', 
                 alignItems: 'flex-start',
                 pointerEvents: 'none', fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
