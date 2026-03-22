@@ -25,6 +25,7 @@
     // 🌐 EL ENRUTADOR INTELIGENTE V12
     // ==========================================
     const CEREBRO_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
+    const FIREBASE_URL = "https://notificacionalamza-default-rtdb.firebaseio.com/alerta_activa.json";
     
     // URLs de los Obreros Activos
     const OBRERO_MEXICO_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
@@ -70,7 +71,128 @@
         const currentUrl = window.location.href;
         return CONFIG_CRMS.some(c => c.domains.some(d => currentUrl.startsWith(d)));
     }
+    
+// ==========================================
+    // 🛡️ MOTOR VISUAL DE ALERTAS Y MODALES (NIVEL 7)
+    // ==========================================
+    const blindarElemento = (el) => {
+        if (!el) return;
+        ['mousedown', 'mouseup', 'click', 'keydown', 'keyup', 'keypress'].forEach(evt => {
+            el.addEventListener(evt, (e) => e.stopPropagation());
+        });
+    };
 
+    const mostrarConfirmacionHTML = (titulo, mensaje, textoConfirmar = 'Aceptar', colorConfirmar = '#3b82f6') => {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            Object.assign(overlay.style, {
+                position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
+                display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '20px', backdropFilter: 'blur(5px)',
+                fontFamily: 'system-ui, -apple-system, sans-serif'
+            });
+
+            const modal = document.createElement('div');
+            Object.assign(modal.style, {
+                background: '#1e293b', padding: '25px', borderRadius: '12px', border: `1px solid ${colorConfirmar}`,
+                width: '420px', maxWidth: '90%', color: 'white', boxShadow: `0 15px 40px rgba(0,0,0,0.6), 0 0 15px ${colorConfirmar}40`,
+                textAlign: 'center'
+            });
+
+            blindarElemento(overlay);
+
+            modal.innerHTML = `
+                <h3 style="margin: 0 0 15px 0; color: ${colorConfirmar}; font-size: 20px; font-weight: bold;">${titulo}</h3>
+                <p style="margin: 0 0 25px 0; font-size: 15px; color: #cbd5e1; line-height: 1.5;">${mensaje}</p>
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="btn-modal-cancel" style="background: transparent; border: 1px solid #64748b; color: #cbd5e1; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Cancelar</button>
+                    <button id="btn-modal-confirm" style="background: ${colorConfirmar}; border: none; color: ${colorConfirmar === '#eab308' || colorConfirmar === '#34d399' ? 'black' : 'white'}; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px ${colorConfirmar}80; transition: 0.2s;">${textoConfirmar}</button>
+                </div>
+            `;
+
+            const btnCancel = modal.querySelector('#btn-modal-cancel');
+            const btnConfirm = modal.querySelector('#btn-modal-confirm');
+            
+            btnCancel.onmouseover = () => btnCancel.style.background = 'rgba(100, 116, 139, 0.2)';
+            btnCancel.onmouseout = () => btnCancel.style.background = 'transparent';
+            btnConfirm.onmouseover = () => btnConfirm.style.transform = 'scale(1.05)';
+            btnConfirm.onmouseout = () => btnConfirm.style.transform = 'scale(1)';
+
+            btnCancel.onclick = () => { overlay.remove(); resolve(false); };
+            btnConfirm.onclick = () => { overlay.remove(); resolve(true); };
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+        });
+    };
+
+    const mostrarModalReparacion = () => {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            Object.assign(overlay.style, {
+                position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
+                display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '20px', backdropFilter: 'blur(5px)',
+                fontFamily: 'system-ui, -apple-system, sans-serif'
+            });
+
+            const modal = document.createElement('div');
+            Object.assign(modal.style, {
+                background: '#1e293b', padding: '25px', borderRadius: '12px', border: `1px solid #ef4444`,
+                width: '420px', maxWidth: '90%', color: 'white', boxShadow: `0 15px 40px rgba(0,0,0,0.6), 0 0 15px #ef444440`,
+                textAlign: 'center'
+            });
+
+            blindarElemento(overlay);
+
+            modal.innerHTML = `
+                <h3 style="margin: 0 0 15px 0; color: #ef4444; font-size: 20px; font-weight: bold;">🚨 Recuperación Total</h3>
+                <p style="margin: 0 0 20px 0; font-size: 14px; color: #cbd5e1; line-height: 1.5;">
+                    Ingresa tus credenciales para <strong>cerrar todas las sesiones activas</strong> en el servidor y limpiar la extensión.
+                </p>
+                <input type="text" id="rep-user" placeholder="Usuario" style="width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #475569; background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box; text-align: center; font-size: 14px;">
+                <input type="password" id="rep-pass" placeholder="Contraseña" style="width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #475569; background: rgba(0,0,0,0.3); color: white; outline: none; box-sizing: border-box; text-align: center; font-size: 14px;">
+                <div style="display: flex; justify-content: center; gap: 15px;">
+                    <button id="btn-rep-cancel" style="background: transparent; border: 1px solid #64748b; color: #cbd5e1; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Cancelar</button>
+                    <button id="btn-rep-confirm" style="background: #ef4444; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #ef444480; transition: 0.2s;">Limpiar Todo</button>
+                </div>
+            `;
+
+            const btnCancel = modal.querySelector('#btn-rep-cancel');
+            const btnConfirm = modal.querySelector('#btn-rep-confirm');
+            const inpUser = modal.querySelector('#rep-user');
+            const inpPass = modal.querySelector('#rep-pass');
+
+            const loggedUser = localStorage.getItem('usuarioLogueado');
+            if (loggedUser) inpUser.value = loggedUser;
+
+            btnCancel.onmouseover = () => btnCancel.style.background = 'rgba(100, 116, 139, 0.2)';
+            btnCancel.onmouseout = () => btnCancel.style.background = 'transparent';
+            btnConfirm.onmouseover = () => btnConfirm.style.transform = 'scale(1.05)';
+            btnConfirm.onmouseout = () => btnConfirm.style.transform = 'scale(1)';
+
+            btnCancel.onclick = () => { overlay.remove(); resolve({ confirmado: false }); };
+            
+            const ejecutar = () => { 
+                const u = inpUser.value.trim();
+                const p = inpPass.value.trim();
+                if(!u || !p) {
+                    inpUser.style.borderColor = '#fbbf24'; inpPass.style.borderColor = '#fbbf24';
+                    setTimeout(() => { inpUser.style.borderColor = '#475569'; inpPass.style.borderColor = '#475569'; }, 2000);
+                    return;
+                }
+                overlay.remove(); resolve({ confirmado: true, user: u, pass: p }); 
+            };
+            
+            btnConfirm.onclick = ejecutar;
+            inpPass.onkeydown = (e) => { if(e.key === 'Enter') ejecutar(); };
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+            
+            if(loggedUser) inpPass.focus(); else inpUser.focus();
+        });
+    };
     // ==========================================
     // 🕵️ INICIO BLOQUE ESPÍA V2.1
     // ==========================================
@@ -458,14 +580,149 @@ function showNotification(message, msgId, type = 'info') {
             btn.style.boxShadow = 'none'; btn.style.textShadow = 'none';
         };
 
-        btn.onclick = () => {
-            if (confirm('¿Cerrar sesión?')) {
-                logoutAndClean(); // 🔥 Usamos la función centralizada
+        btn.onclick = async () => {
+            const confirmado = await mostrarConfirmacionHTML(
+                '🚪 Cerrar Sesión',
+                '¿Estás seguro de querer <strong>cerrar tu sesión</strong> en el CRM?',
+                'Sí, Cerrar',
+                '#ef4444'
+            );
+            if (confirmado) {
+                logoutAndClean(); 
             }
         };
         document.body.appendChild(btn);
     }
+function checkRepairButton() {
+        if (!isValidCrmDomain()) return;
 
+        const currentUrl = window.location.href.toLowerCase();
+        const loggedUser = localStorage.getItem('usuarioLogueado');
+        const existingBtn = document.getElementById('btn-auth-repair-global');
+
+        // Solo visible en Login o cuando no hay sesión.
+        if (loggedUser && !currentUrl.includes('/login')) {
+            if (existingBtn) existingBtn.remove();
+            return;
+        }
+
+        if (existingBtn) return;
+
+        const btn = document.createElement('button');
+        btn.id = 'btn-auth-repair-global';
+        btn.innerHTML = '<span style="font-size:24px; font-weight:bold; padding-bottom:4px; padding-right:2px;">↺</span>';
+        
+        Object.assign(btn.style, {
+            position: 'fixed', top: '0', right: '0', zIndex: '2147483647',
+            width: '45px', height: '45px',
+            backgroundColor: 'rgba(245, 158, 11, 0.1)', backdropFilter: 'blur(5px)',
+            color: '#f59e0b', borderRadius: '0 0 0 24px',
+            borderBottom: '1px solid #f59e0b', borderLeft: '1px solid #f59e0b', borderRight: 'none', borderTop: 'none',
+            cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', 
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        });
+
+        btn.onmouseenter = () => {
+            btn.style.width = '50px'; btn.style.height = '50px';
+            btn.style.backgroundColor = 'rgba(245, 158, 11, 0.50)'; btn.style.color = '#ffffff'; btn.style.borderColor = '#f59e0b';
+            btn.style.boxShadow = '0 0 15px rgba(245, 158, 11, 0.5), inset 0 0 10px rgba(245, 158, 11, 0.1)';
+            btn.style.textShadow = '0 0 8px rgba(245, 158, 11, 1)';
+        };
+        btn.onmouseleave = () => {
+            btn.style.width = '45px'; btn.style.height = '45px';
+            btn.style.backgroundColor = 'rgba(245, 158, 11, 0.1)'; btn.style.color = '#f59e0b';
+            btn.style.borderBottom = '1px solid #f59e0b'; btn.style.borderLeft = '1px solid #f59e0b';
+            btn.style.boxShadow = 'none'; btn.style.textShadow = 'none';
+        };
+
+        btn.onclick = async () => {
+            const result = await mostrarModalReparacion();
+            if (!result.confirmado) return;
+            
+            btn.innerHTML = '<span style="font-size:16px;">⏳</span>';
+
+            const mostrarProgreso = (texto, icono, color) => {
+                let cartel = document.getElementById('toast-reparacion');
+                if (!cartel) {
+                    cartel = document.createElement('div');
+                    cartel.id = 'toast-reparacion';
+                    Object.assign(cartel.style, {
+                        position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%) translateY(-20px)',
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)', border: `1px solid ${color}`,
+                        color: 'white', padding: '12px 25px', borderRadius: '50px',
+                        zIndex: '2147483647', fontWeight: 'bold', fontSize: '14px',
+                        boxShadow: `0 10px 30px ${color}40`, display: 'flex', alignItems: 'center', gap: '10px',
+                        backdropFilter: 'blur(10px)', transition: 'all 0.3s', opacity: '0'
+                    });
+                    document.body.appendChild(cartel);
+                    requestAnimationFrame(() => { cartel.style.opacity = '1'; cartel.style.transform = 'translateX(-50%) translateY(0)'; });
+                } else {
+                    cartel.style.border = `1px solid ${color}`;
+                    cartel.style.boxShadow = `0 10px 30px ${color}40`;
+                }
+                cartel.innerHTML = `<span style="font-size:18px; animation: pulse 1s infinite alternate;">${icono}</span> <span>${texto}</span>`;
+            };
+
+            if (!document.getElementById('anim-pulse')) {
+                const style = document.createElement('style');
+                style.id = 'anim-pulse';
+                style.innerHTML = `@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }`;
+                document.head.appendChild(style);
+            }
+
+            try {
+                mostrarProgreso('Validando credenciales...', '🔐', '#3b82f6'); 
+                
+                const urlLogin = new URL(API_URL);
+                urlLogin.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+                urlLogin.searchParams.append('action', 'login');
+                urlLogin.searchParams.append('usuario', result.user);
+                urlLogin.searchParams.append('contrasena', result.pass);
+                urlLogin.searchParams.append('sessionId', 'repair_check_' + Date.now());
+
+                const loginRes = await new Promise(resolve => {
+                    safeSendMessage({ action: 'proxy_fetch', url: urlLogin.toString(), options: { method: 'GET' } }, resolve);
+                });
+
+                if (!loginRes || !loginRes.success || !loginRes.data || !loginRes.data.success) {
+                    throw new Error('Contraseña Incorrecta');
+                }
+
+                mostrarProgreso('Borrando sesiones activas...', '🔥', '#ef4444'); 
+                
+                const urlKill = new URL(API_URL);
+                urlKill.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+                urlKill.searchParams.append('action', 'kill_all');
+                urlKill.searchParams.append('usuario', result.user);
+                
+                await new Promise(resolve => {
+                    safeSendMessage({ action: 'proxy_fetch', url: urlKill.toString(), options: { method: 'GET' } }, resolve);
+                });
+
+                mostrarProgreso('Reiniciando extensión...', '♻️', '#f59e0b'); 
+                
+                if (localStorage.getItem('usuarioLogueado')) logoutAndClean(); 
+                localStorage.clear(); sessionStorage.clear();
+                try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.clear(); } catch(e) {}
+                
+                mostrarProgreso('¡Restauración Completa!', '✅', '#10b981'); 
+                
+                setTimeout(() => window.location.reload(true), 1500);
+
+            } catch (e) {
+                btn.innerHTML = '<span style="font-size:24px; font-weight:bold; padding-bottom:4px; padding-right:2px;">↺</span>';
+                mostrarProgreso(e.message || 'Fallo de conexión', '❌', '#ef4444');
+                setTimeout(() => {
+                    const cartel = document.getElementById('toast-reparacion');
+                    if (cartel) {
+                        cartel.style.opacity = '0';
+                        setTimeout(() => cartel.remove(), 300);
+                    }
+                }, 4000);
+            }
+        };
+        document.body.appendChild(btn);
+    }
     function logoutAndClean() {
         const user = localStorage.getItem('usuarioLogueado');
         const sessId = localStorage.getItem('sessionId');
@@ -499,7 +756,7 @@ function showNotification(message, msgId, type = 'info') {
         Object.assign(overlay.style, {
             position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
             backgroundColor: 'rgba(10, 15, 30, 0.65)', backdropFilter: 'blur(20px)', webkitBackdropFilter: 'blur(20px)',
-            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000000,
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: '2147483646',
             fontFamily: "'Segoe UI', 'Roboto', sans-serif"
         });
 
@@ -885,7 +1142,6 @@ function showNotification(message, msgId, type = 'info') {
         if (window.firebaseEscuchando) return; 
         window.firebaseEscuchando = true;
 
-        const FIREBASE_URL = "https://notificacionalamza-default-rtdb.firebaseio.com/alerta_activa.json";
         let source = null; // Lo declaramos aquí para que toda la función lo vea
 
         const procesarAviso = (aviso) => {
@@ -1179,6 +1435,7 @@ function showNotification(message, msgId, type = 'info') {
                 if (isValidCrmDomain()) {
                     heartbeat();
                     checkLogoutButton();
+                    checkRepairButton(); // <--- AÑADIDO
                 }
             }
         };
@@ -1193,11 +1450,17 @@ function showNotification(message, msgId, type = 'info') {
             if (isValidCrmDomain()) {
                 heartbeat();
                 checkLogoutButton();
+                checkRepairButton(); // <--- AÑADIDO
             }
         }, 20000);
     }
 
-    setInterval(() => { checkTimerWidget(); }, 1000);
+    // 🔥 BUCLE DE VIGILANCIA UI 
+    setInterval(() => { 
+        checkTimerWidget(); 
+        checkLogoutButton(); 
+        checkRepairButton(); // <--- AÑADIDO
+    }, 1000);
 
     window.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
@@ -1224,6 +1487,8 @@ function showNotification(message, msgId, type = 'info') {
 
     async function init() {
         if (!isValidCrmDomain()) return; 
+
+        checkRepairButton(); // <--- AÑADIDO
 
         const user = localStorage.getItem('usuarioLogueado');
         const loginTime = localStorage.getItem('loginTimestamp');
@@ -1270,8 +1535,20 @@ function showNotification(message, msgId, type = 'info') {
         console.log('Auth System Ready');
     })();
 
-    window.addEventListener('popstate', checkLogoutButton);
-    window.addEventListener('hashchange', checkLogoutButton);
+    window.addEventListener('popstate', () => { checkLogoutButton(); checkRepairButton(); });
+    window.addEventListener('hashchange', () => { checkLogoutButton(); checkRepairButton(); });
+    
+    // 🔥 OBSERVADOR DE SPA (Vue.js Router) - Detecta cambios de URL en tiempo real
+    let lastAuthUrl = location.href;
+    new MutationObserver(() => {
+        if (location.href !== lastAuthUrl) { 
+            lastAuthUrl = location.href; 
+            checkLogoutButton(); 
+            checkRepairButton(); 
+            checkTimerWidget();
+        }
+    }).observe(document, { subtree: true, childList: true });
+
     // 🔥 RASTREADOR MULTI-PESTAÑA
     setInterval(() => {
         if (!document.hidden) {
