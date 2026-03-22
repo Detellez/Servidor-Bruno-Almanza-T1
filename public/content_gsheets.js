@@ -62,7 +62,7 @@
             padding: '12px 24px', 
             backgroundColor: 'rgba(10, 15, 30, 0.8)', 
             color: '#ffffff',
-            borderRadius: '50px', zIndex: '2147483647',
+            borderRadius: '50px', zIndex: '2147483640',
             boxShadow: `0 0 15px ${accentColor}40`, 
             border: `1px solid ${accentColor}`,
             backdropFilter: 'blur(10px)',
@@ -118,7 +118,7 @@
         wrapper.className = 'addon-panel-independent';
         Object.assign(wrapper.style, {
             position: 'fixed', left: '0', bottom: '0', 
-            zIndex: '2147483647', // 🔥 FIX: Z-Index máximo para estar siempre arriba
+            zIndex: '2147483640',
             display: 'flex', flexDirection: 'column-reverse', // Botón abajo, menú arriba
             alignItems: 'flex-start',
             pointerEvents: 'none', 
