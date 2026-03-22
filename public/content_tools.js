@@ -25,8 +25,8 @@
     
     const RUTAS_PERMITIDAS = ["/detail2", "/detail3"];
     
-    const Z_UI_LAYER = "2147483645"; 
-    const Z_TOAST = "2147483647";
+    const Z_UI_LAYER = "2147483643"; 
+    const Z_TOAST = "2147483643";
 
     // 2. ESTILOS Y UTILIDADES UI (TOOLS)
     const applyDynamicHover = (btn, targetColor) => {
@@ -60,12 +60,33 @@
         btn.onmousedown = () => btn.style.transform = 'scale(0.95)';
     };
 
-    const WRAPPER_STYLE = { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: "2147483646", display: "flex", alignItems: "flex-start" };
+    const WRAPPER_STYLE = { position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: "2147483643", display: "flex", alignItems: "flex-start" };
     const MODAL_STYLE = { backgroundColor: "rgba(15, 23, 42, 0.95)", backdropFilter: "blur(20px)", padding: "25px", borderRadius: "16px", boxShadow: "0 20px 50px rgba(0,0,0,0.5)", width: "650px", height: "650px", minWidth: "350px", minHeight: "400px", display: "flex", flexDirection: "column", gap: "15px", border: "1px solid rgba(255, 255, 255, 0.15)", resize: "both", overflow: "hidden", color: "#f1f5f9" };
     const SIDEBAR_STYLE = { position: "absolute", right: "102%", top: "0", width: "180px", maxHeight: "100%", backgroundColor: "rgba(10, 15, 30, 0.9)", border: "1px solid rgba(255, 255, 255, 0.1)", borderRadius: "12px", padding: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", overflowY: "auto", display: "none", fontSize: "11px", boxSizing: "border-box", color: "#cbd5e1", backdropFilter: "blur(10px)" };
     const COPY_ICON_STYLE = `cursor: pointer; font-size: 16px; border: none; background: transparent; padding: 0 4px; vertical-align: middle; line-height: 1; filter: none;`;
 
     // 3. UTILIDADES DE EXTRACCIÓN
+    
+    // 🔥 Lector exacto de la tabla oculta de Variousplan
+    const obtenerValorTablaVarious = (nombreColumna) => {
+        try {
+            const pane = document.getElementById('pane-fourth');
+            if (!pane) return '';
+            const headerWrapper = pane.querySelector('.el-table__header-wrapper');
+            if (!headerWrapper) return '';
+            const headers = Array.from(headerWrapper.querySelectorAll('th .cell'));
+            const index = headers.findIndex(h => (h.textContent || '').trim().toLowerCase().includes(nombreColumna.toLowerCase()));
+            if (index === -1) return '';
+            const bodyWrapper = pane.querySelector('.el-table__body-wrapper');
+            if (!bodyWrapper) return '';
+            const row = bodyWrapper.querySelector('tbody tr'); 
+            if (!row) return '';
+            const cells = Array.from(row.querySelectorAll('td .cell'));
+            if (cells[index]) return (cells[index].textContent || '').trim();
+            return '';
+        } catch(e) { return ''; }
+    };
+
     const getTextAfterLabel = (label) => {
         // 🔥 MAGIA: Usamos textContent en lugar de innerText
         const el = [...document.querySelectorAll("div.mb-10")].find(el => (el.textContent || "").includes(label));
@@ -146,8 +167,9 @@ function procesarTags(texto) {
         const valTelefono = countryInfo.prefix.replace('+','') + getTextAfterLabel("Teléfono");
         const valPlazoTotal = getTextAfterLabel("Total de plazos");
         
-        // Detectamos si estamos en detail3
+        // Detectamos si estamos en detail3 y en Variousplan
         const isDetail3 = window.location.href.includes("/detail3");
+        const isVarious = window.location.href.includes("variousplan.com");
 
         // Iniciamos vacíos por defecto (para que en detail2 no ponga nada)
         let valDiasMora = "";
@@ -156,9 +178,17 @@ function procesarTags(texto) {
 
         // Si es detail3, recién ahí hacemos la búsqueda en el DOM
         if (isDetail3) {
-            valDiasMora = getTextAfterLabel("Días de mora");
-            valCargoMora = getTextAfterLabel("Cargo por mora");
-            valMontoPago = getTextAfterLabel("Monto de pago");
+            if (isVarious) {
+                // Lee directamente desde la tabla
+                valDiasMora = obtenerValorTablaVarious("Días de mora");
+                valCargoMora = obtenerValorTablaVarious("Cargo por mora");
+                valMontoPago = obtenerValorTablaVarious("Monto del Contrato");
+            } else {
+                // Modo normal para Cashimex, CredNotas, etc.
+                valDiasMora = getTextAfterLabel("Días de mora");
+                valCargoMora = getTextAfterLabel("Cargo por mora");
+                valMontoPago = getTextAfterLabel("Monto de pago");
+            }
         }
 
         // 🔥 LÓGICA UNIFICADA DE CACHÉ (VISUAL CHECK)
@@ -247,7 +277,7 @@ function procesarTags(texto) {
     function mostrarModalCreacion(botonEditar = null) {
         if(document.getElementById('modal-creador-btn')) return;
         const backdrop = document.createElement('div');
-        Object.assign(backdrop.style, { position: 'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.6)', zIndex: '2147483646', backdropFilter: 'blur(5px)' });
+        Object.assign(backdrop.style, { position: 'fixed', top:0, left:0, width:'100%', height:'100%', background:'rgba(0,0,0,0.6)', zIndex: '2147483643', backdropFilter: 'blur(5px)' });
         backdrop.id = 'modal-creador-btn';
         const wrapper = document.createElement('div');
         Object.assign(wrapper.style, WRAPPER_STYLE);
@@ -670,6 +700,7 @@ function procesarTags(texto) {
             
             // 🔥 Exportación inteligente según detail2 o detail3
             const isDetail3 = window.location.href.includes("/detail3");
+            const isVarious = window.location.href.includes("variousplan.com");
             const baseData = [
                 id, getTextAfterLabel("Nombre"), (document.querySelector("span.el-tooltip")?.innerText || ""), 
                 getTextAfterLabel("Nombre del producto"), getTextAfterLabel("Pago completo de la factura"), 
@@ -678,11 +709,19 @@ function procesarTags(texto) {
 
             // Solo agregamos las columnas de mora si es detail3
             if (isDetail3) {
-                baseData.push(
-                    getTextAfterLabel("Días de mora"), 
-                    getTextAfterLabel("Cargo por mora"), 
-                    getTextAfterLabel("Monto de pago")
-                );
+                if (isVarious) {
+                    baseData.push(
+                        obtenerValorTablaVarious("Días de mora"), 
+                        obtenerValorTablaVarious("Cargo por mora"), 
+                        obtenerValorTablaVarious("Monto del Contrato")
+                    );
+                } else {
+                    baseData.push(
+                        getTextAfterLabel("Días de mora"), 
+                        getTextAfterLabel("Cargo por mora"), 
+                        getTextAfterLabel("Monto de pago")
+                    );
+                }
             }
 
             // Agregamos correo, teléfono y referencias al final
@@ -946,7 +985,7 @@ function renderizarBotonSoporteNativo() {
         const EDITOR_STYLES = `
             #panel-dom-editor {
                 position: fixed; top: 50%; left: 45px; transform: translateY(-50%) scale(0.95);
-                z-index: 2147483647; opacity: 0; pointer-events: none;
+                z-index: 2147483643; opacity: 0; pointer-events: none;
                 background-color: rgba(10, 15, 30, 0.75); 
                 backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
                 padding: 12px; border-radius: 14px;
@@ -983,7 +1022,7 @@ function renderizarBotonSoporteNativo() {
             .reset-btn:hover { background: #3b82f6; }
             .close-btn { cursor: pointer; color: #94a3b8; font-weight: bold; font-size: 18px; line-height: 1; }
             .close-btn:hover { color: white; }
-            #btn-open-editor { position: fixed; left: -42px; top: ${BUTTON_TOP_POS}; width: 55px; height: 45px; z-index: 2147483640; background-color: rgba(10, 15, 30, 0.95); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255, 255, 255, 0.2); border-left: none; border-radius: 0 12px 12px 0; cursor: pointer; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; backdrop-filter: blur(10px); box-shadow: 2px 2px 10px rgba(0,0,0,0.3); transition: all 0.3s; }
+            #btn-open-editor { position: fixed; left: -42px; top: ${BUTTON_TOP_POS}; width: 55px; height: 45px; z-index: 2147483643; background-color: rgba(10, 15, 30, 0.95); color: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255, 255, 255, 0.2); border-left: none; border-radius: 0 12px 12px 0; cursor: pointer; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: flex-end; padding-right: 12px; backdrop-filter: blur(10px); box-shadow: 2px 2px 10px rgba(0,0,0,0.3); transition: all 0.3s; }
             #btn-open-editor:hover { left: 0; justify-content: center; padding-right: 0; width: 60px; color: #fbbf24; border-color: #fbbf24; }
         `;
         const styleEl = document.createElement('style'); styleEl.innerText = EDITOR_STYLES; document.head.appendChild(styleEl);
