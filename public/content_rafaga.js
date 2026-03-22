@@ -127,7 +127,7 @@
         Object.assign(div.style, {
             position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', padding: '10px 20px', 
             backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff', borderRadius: '30px', 
-            zIndex: 2147483647, borderLeft: `3px solid ${color}`, backdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
+            zIndex: 2147483645, borderLeft: `3px solid ${color}`, backdropFilter: 'blur(10px)', boxShadow: '0 4px 15px rgba(0,0,0,0.3)'
         });
         document.body.appendChild(div);
         setTimeout(() => div.remove(), tiempo); 
@@ -138,7 +138,7 @@
             const overlay = document.createElement('div');
             Object.assign(overlay.style, {
                 position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483645',
                 display: 'flex', justifyContent: 'center', alignItems: 'center', backdropFilter: 'blur(5px)',
                 fontFamily: 'system-ui, -apple-system, sans-serif'
             });
@@ -556,7 +556,7 @@
                 position: 'fixed', top: '10vh', left: '50%', transform: 'translateX(-50%)', 
                 width: 'max-content', maxWidth: '96vw', height: 'auto', maxHeight: '80vh', 
                 backgroundColor: 'rgba(15, 23, 42, 0.95)', color: '#fff', borderRadius: '12px', 
-                zIndex: 2147483600, backdropFilter: 'blur(10px)', boxShadow: '0 15px 40px rgba(0,0,0,0.6)', 
+                zIndex: 2147483645, backdropFilter: 'blur(10px)', boxShadow: '0 15px 40px rgba(0,0,0,0.6)', 
                 display: 'none', flexDirection: 'column', border: '1px solid #334155', 
                 fontFamily: 'system-ui, -apple-system, sans-serif',
                 
