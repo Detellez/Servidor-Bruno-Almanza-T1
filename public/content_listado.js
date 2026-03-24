@@ -46,6 +46,67 @@
         btn.onmouseup = () => btn.style.transform = 'translateY(-1px)';
     };
 
+    // --- NOTIFICACIÓN ESTÉTICA (GLOBAL) ---
+    const mostrarAlertaEstetica = (totalPestanas, totalClientesReales) => {
+        if (document.getElementById('crm-alerta-fin')) return; 
+        
+        const modal = document.createElement('div');
+        modal.id = 'crm-alerta-fin';
+        Object.assign(modal.style, {
+            position: 'fixed', 
+            top: '50%',  // 🔥 Centrado vertical absoluto
+            left: '50%', // 🔥 Centrado horizontal absoluto
+            transform: 'translate(-50%, -50%) scale(0.9)', // 🔥 Anclaje exacto al centro
+            opacity: '0', backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+            border: '1px solid rgba(255, 255, 255, 0.15)', padding: '15px 25px', 
+            borderRadius: '12px', boxShadow: '0 15px 40px rgba(0,0,0,0.7)', 
+            display: 'flex', alignItems: 'center', gap: '15px',
+            zIndex: '2147483647', fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            color: '#fff', minWidth: '300px', width: 'max-content',
+            transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+            backdropFilter: 'blur(10px)'
+        });
+
+        modal.innerHTML = `
+            <div style="font-size: 28px; text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);">✅</div>
+            <div style="display: flex; flex-direction: column; flex-grow: 1; text-align: left;">
+                <span style="font-size: 14px; color: #10b981; font-weight: 800; letter-spacing: 0.5px;">APERTURA FINALIZADA</span>
+                <span style="font-size: 13px; color: #e2e8f0; margin-top: 3px;">
+                    <strong style="color: #fbbf24; font-size: 14px;">${totalPestanas}</strong> pestañas abiertas.
+                </span>
+                <span style="font-size: 12px; color: #9ca3af;">
+                    (${totalClientesReales} clientes únicos)
+                </span>
+            </div>
+        `;
+
+        const btn = document.createElement('button');
+        btn.innerText = 'OK';
+        Object.assign(btn.style, {
+            backgroundColor: '#10b981', color: '#fff', border: 'none', padding: '10px 20px',
+            borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold',
+            fontSize: '13px', transition: 'all 0.2s', marginLeft: '10px'
+        });
+        
+        btn.onmouseover = () => { btn.style.backgroundColor = '#059669'; btn.style.transform = 'translateY(-2px)'; };
+        btn.onmouseout = () => { btn.style.backgroundColor = '#10b981'; btn.style.transform = 'translateY(0)'; };
+        btn.onmousedown = () => { btn.style.transform = 'scale(0.95)'; };
+        
+        btn.onclick = () => {
+            modal.style.transform = 'translate(-50%, -50%) scale(0.9)'; // 🔥 Animación de cierre al centro
+            modal.style.opacity = '0';
+            setTimeout(() => modal.remove(), 300);
+        };
+
+        modal.appendChild(btn);
+        document.body.appendChild(modal);
+
+        requestAnimationFrame(() => {
+            modal.style.transform = 'translate(-50%, -50%) scale(1)'; // 🔥 Animación de entrada al centro
+            modal.style.opacity = '1';
+        });
+    };
+
     // --- LÓGICA DE SELECTORES ---
 
     function getDynamicColumnSelector(keywords, defaultSelector) {
@@ -67,6 +128,37 @@
 
     function init() {
         if (intervalId) clearInterval(intervalId);
+
+        // 🚀 NUEVA LÓGICA: Atrapa la alerta en la pestaña 'detail'
+        if (window.location.href.toLowerCase().includes('detail')) {
+            // Le damos 1.5 segundos para que la ráfaga de pestañas termine
+            // y no se la robe una pestaña intermedia que cargó más rápido.
+            setTimeout(() => {
+                if (localStorage.getItem('CRM_SHOW_ALERT') === 'true') {
+                    const checkVisibilityAndShow = () => {
+                        // Si es la pestaña que estás viendo AHORA MISMO
+                        if (document.visibilityState === 'visible') {
+                            localStorage.removeItem('CRM_SHOW_ALERT'); // Consumimos la alerta
+                            const totalClientes = localStorage.getItem('CRM_TOTAL_CLIENTES_REALES') || '0';
+                            const totalPestanas = localStorage.getItem('CRM_TOTAL_PESTANAS') || '0';
+                            mostrarAlertaEstetica(totalPestanas, totalClientes);
+                        } else {
+                            // Si está en segundo plano, espera a que cambies a ella
+                            document.addEventListener('visibilitychange', function onVis() {
+                                if (document.visibilityState === 'visible' && localStorage.getItem('CRM_SHOW_ALERT') === 'true') {
+                                    localStorage.removeItem('CRM_SHOW_ALERT');
+                                    const totalClientes = localStorage.getItem('CRM_TOTAL_CLIENTES_REALES') || '0';
+                                    const totalPestanas = localStorage.getItem('CRM_TOTAL_PESTANAS') || '0';
+                                    mostrarAlertaEstetica(totalPestanas, totalClientes);
+                                    document.removeEventListener('visibilitychange', onVis);
+                                }
+                            });
+                        }
+                    };
+                    checkVisibilityAndShow();
+                }
+            }, 1500); 
+        }
 
         const currentUrl = window.location.href;
         const currentCrm = CONFIG_CRMS.find(c => c.domains.some(domain => currentUrl.includes(domain))) || {
@@ -99,7 +191,7 @@
             if (buttons.length === 0) return alert('No se encontraron botones.');
             if (reverseOrder) buttons.reverse();
 
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
 
             if (isMac) {
                 const abrirSeguro = async () => {
@@ -205,7 +297,17 @@
             let duplicates = duplicateGroups.flat();
             const finalOrder = [...duplicates, ...uniques];
             const selectorAction = getSelectorAction();
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+            const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+
+            // 🧠 1. CALCULAMOS LOS DATOS REALES
+            const totalClientesReales = Object.keys(groupedRows).length;
+            const totalPestanas = finalOrder.length;
+            
+            localStorage.setItem('CRM_TOTAL_CLIENTES_REALES', totalClientesReales);
+            localStorage.setItem('CRM_TOTAL_PESTANAS', totalPestanas);
+            
+            // Borramos la bandera por si quedó pegada de un uso anterior
+            localStorage.removeItem('CRM_SHOW_ALERT');
 
             if (isMac) {
                 const abrirPestañasSeguro = async () => {
@@ -218,6 +320,8 @@
                         }
                         await new Promise(resolve => setTimeout(resolve, 450));
                     }
+                    // 🔥 Al finalizar de abrir todas, activamos la bandera
+                    localStorage.setItem('CRM_SHOW_ALERT', 'true');
                 };
                 abrirPestañasSeguro();
             } else {
@@ -227,6 +331,13 @@
                                            Array.from(row.querySelectorAll('span, button')).find(el => el.innerText.includes('Seguimiento'));
                         if (cellAction) {
                             cellAction.dispatchEvent(new MouseEvent('click', { view: window, bubbles: true, cancelable: true, ctrlKey: true, metaKey: false }));
+                        }
+                        
+                        // 🔥 Si es la ÚLTIMA pestaña en abrirse, activamos la bandera
+                        if (index === finalOrder.length - 1) {
+                            setTimeout(() => {
+                                localStorage.setItem('CRM_SHOW_ALERT', 'true');
+                            }, 300); // Pequeño margen para asegurar que el click ya se dio
                         }
                     }, index * 150); 
                 });
