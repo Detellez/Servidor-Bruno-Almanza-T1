@@ -1,87 +1,613 @@
 (function() {
     'use strict';
 
-    // ==========================================
-    // 1. CONFIGURACIÓN
-    // ==========================================
-    // 🛡️ INICIO BLINDAJE GLOBAL ANTI-INSPECCIÓN V5 (DEFINITIVO PARA TOOLS) 🛡️
+// =========================================================================
+    // 🛡️ MÓDULO 1: MENÚ OSCURO INTELIGENTE V36 (NOMBRES, BORDES Y COOLDOWN) 🛡️
+    // =========================================================================
+    
     const styleBlindaje = document.createElement('style');
     styleBlindaje.innerHTML = `
-        /* Blindaje absoluto a los contenedores y TODOS sus hijos (*) */
-        [id*="addon"], [id*="addon"] *,
-        [id*="visor"], [id*="visor"] *,
-        [id*="panel"], [id*="panel"] *,
-        [id*="wrapper"], [id*="wrapper"] *,
-        [id*="social"], [id*="social"] *,
-        [id*="manual"], [id*="manual"] *,
-        [id*="tool"], [id*="tool"] *,
-        [id*="plantilla"], [id*="plantilla"] *,
-        [id*="editor"], [id*="editor"] *,
-        [id*="herramientas"], [id*="herramientas"] *,
-        [id*="modal"], [id*="modal"] *,
-        [id*="custom"], [id*="custom"] *,
-        [id*="btn-"], [id*="btn-"] *,
-        [id*="dyn-"], [id*="dyn-"] *,
-        [id*="floating"], [id*="floating"] *,
-        [id*="guide"], [id*="guide"] *,
-        [class*="addon"], [class*="addon"] *,
-        [class*="panel"], [class*="panel"] *,
-        .side-btn-app, .side-btn-app *,
-        .visor-btn, .visor-btn *,
-        .ghost-toast-msg, .ghost-toast-msg *,
-        .btn-copy-tag, .btn-copy-tag * {
+        /* Blindaje visual */
+        [id*="addon"], [id*="addon"] *, [id*="visor"], [id*="visor"] *,
+        [id*="panel"], [id*="panel"] *, [id*="wrapper"], [id*="wrapper"] *,
+        [id*="social"], [id*="social"] *, [id*="manual"], [id*="manual"] *,
+        [id*="tool"], [id*="tool"] *, [id*="plantilla"], [id*="plantilla"] *,
+        [id*="editor"], [id*="editor"] *, [id*="herramientas"], [id*="herramientas"] *,
+        [id*="modal"], [id*="modal"] *, [id*="custom"], [id*="custom"] *,
+        [id*="btn-"], [id*="btn-"] *, [id*="dyn-"], [id*="dyn-"] *,
+        [id*="floating"], [id*="floating"] *, [id*="guide"], [id*="guide"] *,
+        [class*="addon"], [class*="addon"] *, [class*="panel"], [class*="panel"] *,
+        .side-btn-app, .side-btn-app *, .visor-btn, .visor-btn *,
+        .ghost-toast-msg, .ghost-toast-msg *, .btn-copy-tag, .btn-copy-tag * {
             user-select: none !important;
             -webkit-user-select: none !important;
         }
-        /* Excepción EXCLUSIVA para inputs y textareas para que puedan escribir */
         input, textarea {
             user-select: auto !important;
             -webkit-user-select: auto !important;
         }
+
+        /* 🎨 ESTILOS DEL MENÚ DIGITAL PRO (WINDOWS 11) */
+        #sst-global-context-menu {
+            position: absolute; z-index: 2147483647; 
+            background: rgba(10, 10, 12, 0.85); 
+            backdrop-filter: blur(45px) saturate(180%);
+            -webkit-backdrop-filter: blur(45px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+            padding: 6px; display: none; flex-direction: column; min-width: 260px; max-width: 320px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+        .sst-ctx-group { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
+        .sst-ctx-group:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 4px; }
+        .sst-ctx-item {
+            padding: 8px 12px; color: #e2e8f0; font-size: 13px; font-weight: 500;
+            cursor: pointer; border-radius: 6px; transition: all 0.15s ease;
+            display: flex; align-items: center; justify-content: space-between;
+            position: relative;
+        }
+        .sst-ctx-item:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        .sst-ctx-icon { opacity: 0.8; font-size: 15px; width: 18px; text-align: center; }
+        .sst-ctx-item:hover .sst-ctx-icon { opacity: 1; }
+        
+        .sst-nav-row { display: flex; justify-content: space-between; padding: 4px 14px; }
+        .sst-nav-btn {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            color: white; border-radius: 6px; width: 30%; padding: 6px 0; cursor: pointer;
+            text-align: center; transition: 0.2s; font-size: 14px;
+        }
+        .sst-nav-btn:hover { background: rgba(255, 255, 255, 0.15); }
+        .sst-ctx-separator { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 8px; isolation: isolate; }
+
+        /* 🔥 ESTILOS PARA SUBMENÚS 🔥 */
+        .sst-has-submenu::after {
+            content: '▸';
+            font-size: 11px; color: rgba(255,255,255,0.5); margin-left: 8px;
+        }
+        .sst-has-submenu:hover::after { color: #38bdf8; }
+
+        .sst-submenu {
+            display: none; position: absolute;
+            /* La posición (left/right) ahora la maneja JS dinámicamente */
+            top: -5px;
+            background: rgba(10, 10, 12, 0.90); 
+            backdrop-filter: blur(45px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.8);
+            padding: 6px; min-width: 200px; z-index: 2147483647;
+        }
+        
+        /* Atracción invisible AMPLIADA para mayor margen de error al mover el ratón */
+        .sst-submenu::before {
+            content: ''; position: absolute;
+            top: -50px; bottom: -50px; left: -50px; right: -50px; /* 🔥 Sube a -40px o -50px si lo quieres más grande */
+            z-index: -1;
+        }
+
+        /* 🔥 TOAST FLOTANTE EN CURSOR 🔥 */
+        #toast-blindaje-fix {
+            position: fixed; z-index: 2147483647; pointer-events: none;
+            background: rgba(32, 32, 35, 0.85); color: #fff; padding: 10px 18px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2); font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 600;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5); backdrop-filter: blur(15px);
+            transition: transform 0.3s ease, opacity 0.3s ease; display: none; opacity: 0;
+        }
     `;
     document.head.appendChild(styleBlindaje);
 
-    // Bloqueador de Clic Derecho (Radar Ultra-Sensible)
-    document.addEventListener('contextmenu', (e) => {
-        const path = e.composedPath();
-        const esElementoExtension = path.some(el => {
-            if (!el || !el.tagName) return false;
+    const ctxMenu = document.createElement('div');
+    ctxMenu.id = 'sst-global-context-menu';
+    ctxMenu.innerHTML = `
+        <div class="sst-ctx-group" id="sst-group-nav">
+            <div class="sst-nav-row">
+                <button class="sst-nav-btn" id="ctx-nav-back" title="Atrás">⬅️</button>
+                <button class="sst-nav-btn" id="ctx-nav-fwd" title="Adelante">➡️</button>
+                <button class="sst-nav-btn" id="ctx-nav-reload" title="Recargar">🔄</button>
+            </div>
+            <div class="sst-ctx-separator"></div>
             
-            // Convertimos a minúsculas para atrapar cualquier variación
+            <div class="sst-ctx-item" id="ctx-tool-rafaga" style="color:#fcd34d;">Panel de Correos <span class="sst-ctx-icon">📧</span></div>
+            
+            <div class="sst-ctx-item sst-has-submenu" id="ctx-submenu-editor-trigger" style="color:#a78bfa;">
+                <div>Editor Visual <span class="sst-ctx-icon">✏️</span></div>
+                <div class="sst-submenu" id="sst-submenu-editor">
+                    <div class="sst-ctx-item" id="ctx-tool-editor" style="color:#a78bfa;">Abrir Editor Visual <span class="sst-ctx-icon">🚀</span></div>
+                    <div class="sst-ctx-item" id="ctx-tool-ghost" style="color:#d8b4fe;">Modo Fantasma <span class="sst-ctx-icon">👻</span></div>
+                    <div class="sst-ctx-separator"></div>
+                    <div class="sst-ctx-item" id="ctx-tool-soporte" style="color:#ef4444;">Soporte <span class="sst-ctx-icon">🆘</span></div>
+                </div>
+            </div>
+            
+            <div class="sst-ctx-item sst-has-submenu" id="ctx-submenu-plantilla-trigger" style="color:#34d399;">
+                <div>Gestión de Plantillas <span class="sst-ctx-icon">📄</span></div>
+                <div class="sst-submenu" id="sst-submenu-plantilla">
+                    <div class="sst-ctx-item" id="ctx-tool-plantilla" style="color:#38bdf8;">Crear Plantilla <span class="sst-ctx-icon">➕</span></div>
+                    <div class="sst-ctx-separator"></div>
+                    <div class="sst-ctx-item" id="ctx-plantilla-import" style="color:#f59e0b;">Importar Backup <span class="sst-ctx-icon">📥</span></div>
+                    <div class="sst-ctx-item" id="ctx-plantilla-export" style="color:#10b981;">Exportar Backup <span class="sst-ctx-icon">📤</span></div>
+                </div>
+            </div>
+
+            <div class="sst-ctx-separator"></div>
+            
+            <div class="sst-ctx-item" id="ctx-tool-hoja" style="color:#10b981;">Abrir Mi Hoja (Sheets) <span class="sst-ctx-icon">📊</span></div>
+            <div class="sst-ctx-item" id="ctx-tool-listado" style="color:#f97316;">Abrir Todo (Clientes) <span class="sst-ctx-icon">📋</span></div>
+            <div class="sst-ctx-item" id="ctx-tool-facebook" style="color:#3b82f6;">Facebook <span class="sst-ctx-icon">📘</span></div>
+
+            <div class="sst-ctx-separator"></div>
+
+            <div class="sst-ctx-item sst-has-submenu" id="ctx-submenu-sistema-trigger" style="color:#94a3b8;">
+                <div>Sistema y Sesión <span class="sst-ctx-icon">⚙️</span></div>
+                <div class="sst-submenu" id="sst-submenu-sistema">
+                    <div class="sst-ctx-item" id="ctx-sys-cache" style="color:#22d3ee;">Borrar Caché <span class="sst-ctx-icon">🧹</span></div>
+                    <div class="sst-ctx-separator"></div>
+                    <div class="sst-ctx-item" id="ctx-sys-logout" style="color:#ef4444;">Cerrar Sesión <span style="font-size:16px; padding-top: 4px; padding-left: 4px;">⏻</span></div>
+                    <div class="sst-ctx-item" id="ctx-sys-reset" style="color:#f97316;">Restablecer <span style="font-size:18px; font-weight:bold; padding-bottom:2px;">↺</span></div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="sst-ctx-group" id="sst-group-image" style="display:none;">
+            <div class="sst-ctx-item" id="ctx-img-view" style="color:#38bdf8; font-weight:bold;">Ver en Visor SST <span class="sst-ctx-icon">📷</span></div>
+            <div class="sst-ctx-separator"></div>
+            <div class="sst-ctx-item" id="ctx-img-open">Abrir imagen en nueva pestaña <span class="sst-ctx-icon">👁️</span></div>
+            <div class="sst-ctx-item" id="ctx-img-save" title="Descarga silenciosa al PC">Guardar imagen como... <span class="sst-ctx-icon">💾</span></div>
+            <div class="sst-ctx-item" id="ctx-img-copy-url">Copiar enlace de imagen <span class="sst-ctx-icon">🔗</span></div>
+            <div class="sst-ctx-item" id="ctx-img-lens">Buscar imagen con Google <span class="sst-ctx-icon">🔍</span></div>
+        </div>
+        
+        <div class="sst-ctx-group" id="sst-group-edit" style="display:none;">
+            <div class="sst-ctx-item" id="ctx-copy">Copiar Texto <span class="sst-ctx-icon">📋</span></div>
+            <div class="sst-ctx-item" id="ctx-cut" style="display:none;">Cortar <span class="sst-ctx-icon">✂️</span></div>
+            <div class="sst-ctx-item" id="ctx-paste" style="display:none;">Pegar <span class="sst-ctx-icon">📝</span></div>
+        </div>
+    `;
+    document.body.appendChild(ctxMenu);
+
+    const toastBlindaje = document.createElement('div');
+    toastBlindaje.id = 'toast-blindaje-fix';
+    document.body.appendChild(toastBlindaje);
+
+    let lastClickX = 0;
+    let lastClickY = 0;
+
+    const showSSTToast = (msg, isError = false) => {
+        toastBlindaje.innerText = msg;
+        toastBlindaje.style.display = 'block';
+        toastBlindaje.style.borderColor = isError ? '#ef4444' : 'rgba(255,255,255,0.2)';
+        
+        let posX = lastClickX + 15;
+        let posY = lastClickY + 15;
+        
+        const ancho = toastBlindaje.offsetWidth || 200;
+        const alto = toastBlindaje.offsetHeight || 40;
+        if (posX + ancho > window.innerWidth) posX = window.innerWidth - ancho - 10;
+        if (posY + alto > window.innerHeight) posY = window.innerHeight - alto - 10;
+
+        toastBlindaje.style.left = posX + 'px';
+        toastBlindaje.style.top = posY + 'px';
+        
+        toastBlindaje.style.transform = 'translateY(15px)';
+        toastBlindaje.style.opacity = '0';
+        
+        setTimeout(() => {
+            toastBlindaje.style.transform = 'translateY(0)';
+            toastBlindaje.style.opacity = '1';
+        }, 10);
+
+        setTimeout(() => {
+            toastBlindaje.style.transform = 'translateY(-20px)';
+            toastBlindaje.style.opacity = '0';
+            setTimeout(() => toastBlindaje.style.display = 'none', 300);
+        }, 2000); 
+    };
+
+    // 🔥 FUNCIÓN CENTRALIZADA PARA CERRAR EL MENÚ Y SUBMENÚS
+    const closeMenuCompletely = () => {
+        ctxMenu.style.display = 'none';
+        ctxMenu.querySelectorAll('.sst-submenu').forEach(sub => sub.style.display = 'none');
+    };
+
+    // 🔥 CONTROL INTELIGENTE DE SUBMENÚS (Hover Magnético y Colisión Lateral)
+    const submenusTriggers = ctxMenu.querySelectorAll('.sst-has-submenu');
+    submenusTriggers.forEach(trigger => {
+        const submenu = trigger.querySelector('.sst-submenu');
+
+        trigger.addEventListener('mouseenter', () => {
+            // Cierra inmediatamente los otros submenús para que no se crucen
+            submenusTriggers.forEach(t => {
+                if (t !== trigger) {
+                    t.querySelector('.sst-submenu').style.display = 'none';
+                }
+            });
+
+            submenu.style.display = 'flex';
+            submenu.style.flexDirection = 'column';
+            submenu.style.gap = '2px';
+
+            // Detección inteligente de bordes
+            const rect = trigger.getBoundingClientRect();
+            if (rect.right + 220 > window.innerWidth) {
+                submenu.style.left = 'auto';
+                submenu.style.right = 'calc(100% + 5px)'; // Lo abre hacia la izquierda
+            } else {
+                submenu.style.left = 'calc(100% + 5px)';
+                submenu.style.right = 'auto'; // Lo abre hacia la derecha normal
+            }
+        });
+
+        trigger.addEventListener('mouseleave', () => {
+            // Se cierra al instante al salir del menú y su zona magnética
+            submenu.style.display = 'none';
+        });
+    });
+
+    let elementoActivo = null;
+    let urlImagenActiva = null;
+    let textoCapturado = "";
+
+    document.addEventListener('contextmenu', (e) => {
+        if (e.altKey) return; 
+        e.preventDefault(); 
+        
+        lastClickX = e.clientX;
+        lastClickY = e.clientY;
+        
+        elementoActivo = e.target;
+        textoCapturado = window.getSelection().toString().trim();
+
+        const path = e.composedPath();
+        let esZonaProhibida = path.some(el => {
+            if (!el || !el.tagName) return false;
+            const tag = el.tagName.toLowerCase();
             const id = (el.id || '').toLowerCase();
             const cls = (typeof el.className === 'string' ? el.className : '').toLowerCase();
             
-            // Escaneo nuclear de TODAS tus palabras clave (Añadido modal, custom, btn-, dyn-)
-            return id.includes('addon') || id.includes('visor') || 
-                   id.includes('panel') || id.includes('wrapper') || 
-                   id.includes('social') || id.includes('manual') || 
-                   id.includes('tool') || id.includes('plantilla') || 
-                   id.includes('editor') || id.includes('herramientas') ||
-                   id.includes('modal') || id.includes('custom') || 
-                   id.includes('btn-') || id.includes('dyn-') || 
-                   id.includes('floating') || id.includes('guide') ||
-                   cls.includes('addon') || cls.includes('side-btn') || 
-                   cls.includes('ghost') || cls.includes('visor-btn') || 
-                   cls.includes('panel') || cls.includes('tool') || 
-                   cls.includes('herramientas') || cls.includes('btn-copy-tag');
+            if (tag === 'button' || tag === 'a' || cls.includes('el-button')) return true;
+            return id.includes('addon') || id.includes('visor') || id.includes('panel') || 
+                   id.includes('wrapper') || id.includes('social') || id.includes('manual') || 
+                   id.includes('tool') || id.includes('plantilla') || id.includes('editor') || 
+                   id.includes('herramientas') || id.includes('modal') || id.includes('custom') || 
+                   id.includes('btn-') || id.includes('dyn-') || id.includes('floating') || 
+                   id.includes('guide') || cls.includes('addon') || cls.includes('side-btn') || 
+                   cls.includes('visor-btn') || cls.includes('btn-copy-tag') || cls.includes('sst-submenu');
         });
 
-        if (esElementoExtension) {
-            // Permitir clic derecho SOLO si el asesor necesita pegar texto en un input
-            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-                e.preventDefault();
-            }
+        const esCajaTexto = (elementoActivo.tagName === 'INPUT' || elementoActivo.tagName === 'TEXTAREA');
+        if (esCajaTexto) esZonaProhibida = false;
+
+        const gNav = document.getElementById('sst-group-nav');
+        const gImg = document.getElementById('sst-group-image');
+        const gEdit = document.getElementById('sst-group-edit');
+        const iCut = document.getElementById('ctx-cut');
+        const iPaste = document.getElementById('ctx-paste');
+        
+        gNav.style.display = 'none'; gImg.style.display = 'none'; gEdit.style.display = 'none';
+        urlImagenActiva = null;
+
+        let mostrarMenu = false;
+
+        if (esCajaTexto) {
+            mostrarMenu = true; gEdit.style.display = 'flex'; iCut.style.display = 'flex'; iPaste.style.display = 'flex';
+            if (!textoCapturado) textoCapturado = elementoActivo.value.substring(elementoActivo.selectionStart, elementoActivo.selectionEnd);
+        } else if (elementoActivo.tagName === 'IMG' && !esZonaProhibida) {
+            mostrarMenu = true; gImg.style.display = 'flex'; urlImagenActiva = elementoActivo.src;
+        } else if (textoCapturado !== '' && !esZonaProhibida) {
+            mostrarMenu = true; gEdit.style.display = 'flex'; iCut.style.display = 'none'; iPaste.style.display = 'none';
+        } else if (!esZonaProhibida) {
+            mostrarMenu = true; gNav.style.display = 'flex';
+        }
+
+        if (mostrarMenu) {
+            closeMenuCompletely(); // Resetear estado de submenús
+
+            // 🔥 VISIBILIDAD POR PESTAÑAS 🔥
+            const currentUrl = window.location.href;
+            const isDetail = currentUrl.includes('/detail');
+            const isListado = currentUrl.includes('loaned_management/pedding_list');
+
+            // Exclusivo Pestaña "Detail"
+            document.getElementById('ctx-tool-plantilla').style.display = isDetail ? 'flex' : 'none';
+            document.getElementById('ctx-tool-facebook').style.display = isDetail ? 'flex' : 'none';
+            document.getElementById('ctx-tool-editor').style.display = isDetail ? 'flex' : 'none';
+            document.getElementById('ctx-tool-soporte').style.display = isDetail ? 'flex' : 'none';
+
+            // Ocultar líneas separadoras de detail
+            const sepSoporte = document.getElementById('ctx-tool-soporte').previousElementSibling;
+            if (sepSoporte) sepSoporte.style.display = isDetail ? 'block' : 'none';
+            const sepPlantilla = document.getElementById('ctx-tool-plantilla').nextElementSibling; // Porque Crear Plantilla subió
+            if (sepPlantilla) sepPlantilla.style.display = isDetail ? 'block' : 'none';
+
+            // Exclusivo Pestaña "Listado"
+            document.getElementById('ctx-tool-listado').style.display = isListado ? 'flex' : 'none';
+
+
+            ctxMenu.style.display = 'flex';
+            const menuAncho = ctxMenu.offsetWidth;
+            const menuAlto = ctxMenu.offsetHeight;
+            let x = lastClickX; 
+            let y = lastClickY;
+            
+            if (x + menuAncho > window.innerWidth) x = window.innerWidth - menuAncho - 10; 
+            if (y + menuAlto > window.innerHeight) y = window.innerHeight - menuAlto - 10;
+            
+            ctxMenu.style.position = 'fixed';
+            ctxMenu.style.left = x + 'px'; 
+            ctxMenu.style.top = y + 'px';
+        } else {
+            closeMenuCompletely();
         }
     });
 
-    // ⛔ EXTRAS: Bloqueo de Teclado Hacker (F12, Ctrl+Shift+I, Ctrl+Shift+C, Ctrl+Shift+J)
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#sst-global-context-menu')) closeMenuCompletely();
+    });
+
+    // ---------------------------------------------------------
+    // 🔥 EVENTOS DE CLIC - HERRAMIENTAS 🔥
+    // ---------------------------------------------------------
+    
+    // Evitar que el clic en los textos padres cierre el menú
+    document.getElementById('ctx-submenu-editor-trigger').onclick = (e) => { e.stopPropagation(); };
+    document.getElementById('ctx-submenu-plantilla-trigger').onclick = (e) => { e.stopPropagation(); };
+    document.getElementById('ctx-submenu-sistema-trigger').onclick = (e) => { e.stopPropagation(); };
+
+    document.getElementById('ctx-tool-rafaga').onclick = () => {
+        closeMenuCompletely();
+        const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+        const eventParams = { key: 'Z', code: 'KeyZ', shiftKey: true, bubbles: true };
+        if (isMac) eventParams.metaKey = true; else eventParams.ctrlKey = true;
+        document.dispatchEvent(new KeyboardEvent('keydown', eventParams));
+    };
+
+    document.getElementById('ctx-tool-editor').onclick = (e) => {
+        e.stopPropagation(); 
+        closeMenuCompletely();
+        const btn = document.getElementById('btn-open-editor'); 
+        if (btn) btn.click(); else showSSTToast("⚠️ Abre un perfil para usar el Editor", true);
+    };
+
+    document.getElementById('ctx-tool-ghost').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        window.dispatchEvent(new CustomEvent('SST_ACTIVATE_GHOST'));
+        setTimeout(() => {
+            const isActive = localStorage.getItem('CRM_GHOST_MODE') === 'true';
+            if (isActive) showSSTToast('👻 Marca de agua OCULTA', false);
+            else showSSTToast('👁️ Marca de agua VISIBLE', true);
+        }, 30);
+    };
+
+    document.getElementById('ctx-tool-soporte').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        const btnSoporte = document.getElementById('btn-soporte-nativo');
+        if (btnSoporte) btnSoporte.click(); else showSSTToast("⚠️ Botón Soporte no cargado", true);
+    };
+
+    document.getElementById('ctx-plantilla-import').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json, .txt';
+        input.onchange = ev => {
+            const file = ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = event => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (Array.isArray(data)) {
+                        localStorage.setItem('CUSTOM_BTNS_LIST', JSON.stringify(data));
+                        window.dispatchEvent(new StorageEvent('storage', { key: 'CUSTOM_BTNS_LIST', newValue: JSON.stringify(data) }));
+                        showSSTToast("📥 Backup restaurado con éxito", false);
+                    } else showSSTToast("⚠️ Formato incorrecto", true);
+                } catch(err) { showSSTToast("❌ Error: Archivo corrupto", true); }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    };
+
+    document.getElementById('ctx-plantilla-export').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        const data = localStorage.getItem('CUSTOM_BTNS_LIST') || "[]";
+        if (data === "[]") { showSSTToast("⚠️ No hay plantillas para exportar", true); return; }
+        const blob = new Blob([data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Plantillas_SST_Backup_${new Date().toISOString().slice(0,10)}.json`; 
+        a.click();
+        URL.revokeObjectURL(url);
+        showSSTToast("📤 Backup exportado con éxito", false);
+    };
+
+    document.getElementById('ctx-tool-plantilla').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        const container = document.getElementById('custom-btns-container');
+        const btnCrear = container ? Array.from(container.children).find(el => el.textContent && el.textContent.includes('Crear Plantilla')) : null;
+        if (btnCrear) btnCrear.click(); else showSSTToast("⚠️ Contenedor de plantillas inactivo", true);
+    };
+
+    document.getElementById('ctx-tool-hoja').onclick = async () => {
+        closeMenuCompletely();
+        const user = localStorage.getItem('usuarioLogueado');
+        if (!user) { showSSTToast('❌ Falta Usuario', true); return; }
+        showSSTToast('🔍 Buscando hoja...');
+        try {
+            const response = await fetch(`${API_URL}?token=SST_V12_CORP_SECURE_2026_X9&usuario=${user}`);
+            const data = await response.json();
+            if (data.id) { window.open('https://docs.google.com/spreadsheets/d/' + data.id + '/edit', '_blank'); showSSTToast('📊 Hoja abierta'); }
+            else showSSTToast('❌ Sin hoja asignada', true);
+        } catch (err) { showSSTToast('⚠️ Error servidor', true); }
+    };
+
+    document.getElementById('ctx-tool-listado').onclick = () => {
+        closeMenuCompletely();
+        const btnListado = Array.from(document.querySelectorAll('button, div, span')).find(btn => btn.textContent && btn.textContent.trim() === '⚡ ABRIR TODO ⚡');
+        if (btnListado) btnListado.click(); else showSSTToast("⚠️ Botón ⚡ ABRIR TODO ⚡ no encontrado", true);
+    };
+
+    document.getElementById('ctx-tool-facebook').onclick = () => {
+        closeMenuCompletely();
+        const btnFB = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent && btn.textContent.includes('Facebook') && !btn.closest('#sst-global-context-menu'));
+        if (btnFB) btnFB.click(); else showSSTToast("⚠️ Botón de Facebook no encontrado", true);
+    };
+
+    document.getElementById('ctx-sys-cache').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        const isVitalKey = (key) => {
+            const exactMatches = ['usuarioLogueado', 'sessionId', 'loginTimestamp', 'sessionLimit', 'configRef', 'deviceUniqueId', 'CUSTOM_BTNS_LIST', 'CRM_GHOST_MODE', 'SYSTEM_NOTIF_SOUND', 'firebaseToken'];
+            const prefixes = ['LAST_', 'CRM_', 'ALERT_', 'NOTIF_', 'DELIVERED_', 'SHARED_', 'RAFAGA_'];
+            if (exactMatches.includes(key)) return true;
+            if (prefixes.some(prefix => key.startsWith(prefix))) return true;
+            return false;
+        };
+        let countBorrados = 0;
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (!isVitalKey(key)) {
+                localStorage.removeItem(key);
+                countBorrados++;
+            }
+        }
+        localStorage.setItem('SST_CACHE_CLEARED', Date.now().toString());
+        showSSTToast(`🧹 Caché limpiado: ${countBorrados}`, false);
+    };
+
+    document.getElementById('ctx-sys-reset').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        
+        const data = localStorage.getItem('CUSTOM_BTNS_LIST') || "[]";
+        if (data !== "[]" && data.length > 5) {
+            showSSTToast("📤 Guardando backup de plantillas...", false);
+            const blob = new Blob([data], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SST_Backup_Auto_Reseteo_${new Date().toISOString().slice(0,10)}.json`; 
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        const isDetail = window.location.href.includes('/detail');
+        localStorage.setItem('cerrar_detalles', Date.now().toString());
+        localStorage.setItem('SST_SYNC_REPAIR', Date.now().toString());
+
+        setTimeout(() => {
+            if (isDetail) {
+                window.close(); 
+            } else {
+                if (typeof window.SST_GLOBAL_REPAIR === 'function') window.SST_GLOBAL_REPAIR();
+            }
+        }, 800); 
+    };
+
+    document.getElementById('ctx-sys-logout').onclick = (e) => {
+        e.stopPropagation();
+        closeMenuCompletely();
+        
+        localStorage.setItem('SST_SYNC_SHOW_LOGOUT', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('SST_SHOW_LOGOUT_PROMPT'));
+    };
+
+    // ---------------------------------------------------------
+    // FUNCIONES DE IMÁGENES Y TEXTO
+    // ---------------------------------------------------------
+    
+    document.getElementById('ctx-img-view').onclick = () => {
+        if (!urlImagenActiva) return;
+        closeMenuCompletely();
+        window.dispatchEvent(new CustomEvent('SST_OPEN_VIEWER', { detail: { url: urlImagenActiva } }));
+    };
+
+    document.getElementById('ctx-img-open').onclick = () => {
+        if (!urlImagenActiva) return;
+        closeMenuCompletely();
+        const novaAba = window.open('', '_blank');
+        novaAba.document.write(`
+            <html><head><title>Visor SST PRO</title></head><body style="margin: 0; display: flex; justify-content: center; align-items: center; background-color: #0e1117; height: 100vh;"><img src="${urlImagenActiva}" style="max-width: 100%; max-height: 100%; object-fit: contain;"></body></html>
+        `);
+        novaAba.document.close();
+    };
+
+    document.getElementById('ctx-img-save').onclick = () => {
+        if (!urlImagenActiva) return;
+        closeMenuCompletely();
+        showSSTToast("💾 Descargando imagen...");
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none'; iframe.src = urlImagenActiva;
+        document.body.appendChild(iframe);
+        setTimeout(() => document.body.removeChild(iframe), 5000);
+    };
+
+    document.getElementById('ctx-img-copy-url').onclick = () => {
+        if (urlImagenActiva) { navigator.clipboard.writeText(urlImagenActiva); showSSTToast("🔗 Enlace copiado"); }
+        closeMenuCompletely();
+    };
+
+    document.getElementById('ctx-img-lens').onclick = () => {
+        if (urlImagenActiva) window.open(`https://lens.google.com/uploadbyurl?url=${encodeURIComponent(urlImagenActiva)}`, '_blank');
+        closeMenuCompletely();
+    };
+
+    document.getElementById('ctx-nav-back').onclick = () => window.history.back();
+    document.getElementById('ctx-nav-fwd').onclick = () => window.history.forward();
+    document.getElementById('ctx-nav-reload').onclick = () => location.reload();
+
+    document.getElementById('ctx-copy').onclick = () => {
+        if (textoCapturado) { navigator.clipboard.writeText(textoCapturado); showSSTToast("📋 Texto copiado"); }
+        else document.execCommand('copy');
+        closeMenuCompletely();
+    };
+    
+    document.getElementById('ctx-cut').onclick = () => {
+        if (textoCapturado && (elementoActivo.tagName === 'INPUT' || elementoActivo.tagName === 'TEXTAREA')) {
+            navigator.clipboard.writeText(textoCapturado);
+            elementoActivo.value = elementoActivo.value.replace(textoCapturado, '');
+        }
+        closeMenuCompletely();
+    };
+    
+    document.getElementById('ctx-paste').onclick = async () => {
+        try {
+            const txt = await navigator.clipboard.readText();
+            if (elementoActivo && (elementoActivo.tagName === 'INPUT' || elementoActivo.tagName === 'TEXTAREA')) {
+                const s = elementoActivo.selectionStart; const e = elementoActivo.selectionEnd;
+                elementoActivo.value = elementoActivo.value.substring(0, s) + txt + elementoActivo.value.substring(e);
+                elementoActivo.selectionStart = elementoActivo.selectionEnd = s + txt.length;
+                elementoActivo.dispatchEvent(new Event('input', { bubbles: true })); 
+            }
+        } catch (err) { showSSTToast("Error. Usa Ctrl+V.", true); }
+        closeMenuCompletely();
+    };
+
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'F12' || 
-           (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'C' || e.key === 'c' || e.key === 'J' || e.key === 'j'))) {
+        const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+        const key = e.key.toLowerCase();
+
+        // Atajos de Windows (Ctrl + Shift + I/J/C) o (Ctrl + U/P)
+        const isWinDev = e.ctrlKey && e.shiftKey && (key === 'i' || key === 'j' || key === 'c');
+        const isWinSource = e.ctrlKey && (key === 'u' || key === 'p');
+
+        // Atajos de Mac (Cmd + Option + I/J/C/U) o (Cmd + U/P)
+        const isMacDev = isMac && e.metaKey && e.altKey && (key === 'i' || key === 'j' || key === 'c' || key === 'u');
+        const isMacSource = isMac && e.metaKey && (key === 'u' || key === 'p');
+
+        if (e.key === 'F12' || isWinDev || isWinSource || isMacDev || isMacSource) {
             e.preventDefault();
         }
     });
-    // 🛡️ FIN BLINDAJE GLOBAL V5 🛡️
+    // =========================================================================
+    // 🛡️ MÓDULO 2: AUTENTICACIÓN, FIREBASE Y ALERTAS (CRM SUITE) 🛡️
+    // =========================================================================
     const CONFIG_CRMS = [{
         'prefix': '+57', 'country': 'COLOMBIA', 'domains': ['https://co-crm.certislink.com'], 'digits': 10
     }, {
@@ -328,8 +854,8 @@
     }
 
     function removeOverlays() {
-        // 🔥 AÑADIDO: removemos también '#addon-alert-overlay' para limpiar alertas viejas
-        document.querySelectorAll('#bloqueo-global-device, #addon-login-overlay, .addon-aviso-temp, #addon-session-timer, #addon-alert-overlay').forEach(el => el.remove());
+        // 🔥 AÑADIDO: removemos también el modal de logout sincronizado
+        document.querySelectorAll('#bloqueo-global-device, #addon-login-overlay, .addon-aviso-temp, #addon-session-timer, #addon-alert-overlay, #sst-logout-modal-sync').forEach(el => el.remove());
     }
 
     // 🔥 FIX 1: COMUNICACIÓN "INMORTAL" (Nunca se rinde)
@@ -658,20 +1184,158 @@ function showNotification(message, msgId, type = 'info') {
             btn.style.boxShadow = 'none'; btn.style.textShadow = 'none';
         };
 
-        btn.onclick = async () => {
-            const confirmado = await mostrarConfirmacionHTML(
-                '🚪 Cerrar Sesión',
-                '¿Estás seguro de querer <strong>cerrar tu sesión</strong> en el CRM?',
-                'Sí, Cerrar',
-                '#ef4444'
-            );
-            if (confirmado) {
-                logoutAndClean(); 
-            }
+        btn.onclick = () => {
+            localStorage.setItem('SST_SYNC_SHOW_LOGOUT', Date.now().toString());
+            window.dispatchEvent(new CustomEvent('SST_SHOW_LOGOUT_PROMPT'));
         };
         document.body.appendChild(btn);
     }
-function checkRepairButton() {
+
+    // 🔥 EVENTO GLOBAL DE CONFIRMACIÓN DE LOGOUT SINCRONIZADO 🔥
+    window.addEventListener('SST_SHOW_LOGOUT_PROMPT', () => {
+        if (document.getElementById('sst-logout-modal-sync')) return; 
+        
+        const overlay = document.createElement('div');
+        overlay.id = 'sst-logout-modal-sync';
+        Object.assign(overlay.style, {
+            position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
+            display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '20px', backdropFilter: 'blur(5px)',
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+        });
+
+        const modal = document.createElement('div');
+        Object.assign(modal.style, {
+            background: '#1e293b', padding: '25px', borderRadius: '12px', border: `1px solid #ef4444`,
+            width: '420px', maxWidth: '90%', color: 'white', boxShadow: `0 15px 40px rgba(0,0,0,0.6), 0 0 15px #ef444440`,
+            textAlign: 'center'
+        });
+
+        blindarElemento(overlay); 
+
+        modal.innerHTML = `
+            <h3 style="margin: 0 0 15px 0; color: #ef4444; font-size: 20px; font-weight: bold;">🚪 Cerrar Sesión</h3>
+            <p style="margin: 0 0 25px 0; font-size: 15px; color: #cbd5e1; line-height: 1.5;">¿Estás seguro de querer <strong>cerrar tu sesión</strong> en el CRM?</p>
+            <div style="display: flex; justify-content: center; gap: 15px;">
+                <button id="btn-sync-logout-cancel" style="background: transparent; border: 1px solid #64748b; color: #cbd5e1; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">Cancelar</button>
+                <button id="btn-sync-logout-confirm" style="background: #ef4444; border: none; color: white; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px #ef444480; transition: 0.2s;">Sí, Cerrar</button>
+            </div>
+        `;
+
+        const btnCancel = modal.querySelector('#btn-sync-logout-cancel');
+        const btnConfirm = modal.querySelector('#btn-sync-logout-confirm');
+        
+        btnCancel.onmouseover = () => btnCancel.style.background = 'rgba(100, 116, 139, 0.2)';
+        btnCancel.onmouseout = () => btnCancel.style.background = 'transparent';
+        btnConfirm.onmouseover = () => btnConfirm.style.transform = 'scale(1.05)';
+        btnConfirm.onmouseout = () => btnConfirm.style.transform = 'scale(1)';
+
+        // Al Cancelar: Manda señal a TODAS las pestañas para que oculten la ventana
+        btnCancel.onclick = () => { 
+            overlay.remove(); 
+            localStorage.setItem('SST_SYNC_CANCEL_LOGOUT', Date.now().toString());
+        };
+        
+        // Al Aceptar: Cierra la sesión (la red se encargará de desconectar a todos)
+        btnConfirm.onclick = () => { 
+            overlay.remove(); 
+            logoutAndClean(); 
+        };
+
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    });
+// 🔥 FUNCIÓN GLOBAL DE REPARACIÓN (SIEMPRE DISPONIBLE PARA EL MENÚ OSCURO) 🔥
+    window.SST_GLOBAL_REPAIR = async () => {
+        const result = await mostrarModalReparacion();
+        if (!result.confirmado) return;
+        
+        const targetBtn = document.getElementById('btn-auth-repair-global') || document.createElement('button');
+        targetBtn.innerHTML = '<span style="font-size:16px;">⏳</span>';
+
+        const mostrarProgreso = (texto, icono, color) => {
+            let cartel = document.getElementById('toast-reparacion');
+            if (!cartel) {
+                cartel = document.createElement('div');
+                cartel.id = 'toast-reparacion';
+                Object.assign(cartel.style, {
+                    position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%) translateY(-20px)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.95)', border: `1px solid ${color}`,
+                    color: 'white', padding: '12px 25px', borderRadius: '50px',
+                    zIndex: '2147483647', fontWeight: 'bold', fontSize: '14px',
+                    boxShadow: `0 10px 30px ${color}40`, display: 'flex', alignItems: 'center', gap: '10px',
+                    backdropFilter: 'blur(10px)', transition: 'all 0.3s', opacity: '0'
+                });
+                document.body.appendChild(cartel);
+                requestAnimationFrame(() => { cartel.style.opacity = '1'; cartel.style.transform = 'translateX(-50%) translateY(0)'; });
+            } else {
+                cartel.style.border = `1px solid ${color}`;
+                cartel.style.boxShadow = `0 10px 30px ${color}40`;
+            }
+            cartel.innerHTML = `<span style="font-size:18px; animation: pulse 1s infinite alternate;">${icono}</span> <span>${texto}</span>`;
+        };
+
+        if (!document.getElementById('anim-pulse')) {
+            const style = document.createElement('style');
+            style.id = 'anim-pulse';
+            style.innerHTML = `@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }`;
+            document.head.appendChild(style);
+        }
+
+        try {
+            mostrarProgreso('Validando credenciales...', '🔐', '#3b82f6'); 
+            
+            const urlLogin = new URL(API_URL);
+            urlLogin.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+            urlLogin.searchParams.append('action', 'login');
+            urlLogin.searchParams.append('usuario', result.user);
+            urlLogin.searchParams.append('contrasena', result.pass);
+            urlLogin.searchParams.append('sessionId', 'repair_check_' + Date.now());
+
+            const loginRes = await new Promise(resolve => {
+                safeSendMessage({ action: 'proxy_fetch', url: urlLogin.toString(), options: { method: 'GET' } }, resolve);
+            });
+
+            if (!loginRes || !loginRes.success || !loginRes.data || !loginRes.data.success) {
+                throw new Error('Contraseña Incorrecta');
+            }
+
+            mostrarProgreso('Borrando sesiones activas...', '🔥', '#ef4444'); 
+            
+            const urlKill = new URL(API_URL);
+            urlKill.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
+            urlKill.searchParams.append('action', 'kill_all');
+            urlKill.searchParams.append('usuario', result.user);
+            
+            await new Promise(resolve => {
+                safeSendMessage({ action: 'proxy_fetch', url: urlKill.toString(), options: { method: 'GET' } }, resolve);
+            });
+
+            mostrarProgreso('Reiniciando extensión...', '♻️', '#f59e0b'); 
+            
+            if (localStorage.getItem('usuarioLogueado')) logoutAndClean(); 
+            localStorage.clear(); sessionStorage.clear();
+            try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.clear(); } catch(e) {}
+            
+            mostrarProgreso('¡Restauración Completa!', '✅', '#10b981'); 
+            
+            setTimeout(() => window.location.reload(true), 1500);
+
+        } catch (e) {
+            targetBtn.innerHTML = '<span style="font-size:24px; font-weight:bold; padding-bottom:4px; padding-right:2px;">↺</span>';
+            mostrarProgreso(e.message || 'Fallo de conexión', '❌', '#ef4444');
+            setTimeout(() => {
+                const cartel = document.getElementById('toast-reparacion');
+                if (cartel) {
+                    cartel.style.opacity = '0';
+                    setTimeout(() => cartel.remove(), 300);
+                }
+            }, 4000);
+        }
+    };
+
+    // 🖥️ UI: BOTÓN DE REPARACIÓN (Solo se muestra en el login)
+    function checkRepairButton() {
         if (!isValidCrmDomain()) return;
 
         const currentUrl = window.location.href.toLowerCase();
@@ -713,94 +1377,10 @@ function checkRepairButton() {
             btn.style.boxShadow = 'none'; btn.style.textShadow = 'none';
         };
 
-        btn.onclick = async () => {
-            const result = await mostrarModalReparacion();
-            if (!result.confirmado) return;
-            
-            btn.innerHTML = '<span style="font-size:16px;">⏳</span>';
-
-            const mostrarProgreso = (texto, icono, color) => {
-                let cartel = document.getElementById('toast-reparacion');
-                if (!cartel) {
-                    cartel = document.createElement('div');
-                    cartel.id = 'toast-reparacion';
-                    Object.assign(cartel.style, {
-                        position: 'fixed', top: '80px', left: '50%', transform: 'translateX(-50%) translateY(-20px)',
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)', border: `1px solid ${color}`,
-                        color: 'white', padding: '12px 25px', borderRadius: '50px',
-                        zIndex: '2147483647', fontWeight: 'bold', fontSize: '14px',
-                        boxShadow: `0 10px 30px ${color}40`, display: 'flex', alignItems: 'center', gap: '10px',
-                        backdropFilter: 'blur(10px)', transition: 'all 0.3s', opacity: '0'
-                    });
-                    document.body.appendChild(cartel);
-                    requestAnimationFrame(() => { cartel.style.opacity = '1'; cartel.style.transform = 'translateX(-50%) translateY(0)'; });
-                } else {
-                    cartel.style.border = `1px solid ${color}`;
-                    cartel.style.boxShadow = `0 10px 30px ${color}40`;
-                }
-                cartel.innerHTML = `<span style="font-size:18px; animation: pulse 1s infinite alternate;">${icono}</span> <span>${texto}</span>`;
-            };
-
-            if (!document.getElementById('anim-pulse')) {
-                const style = document.createElement('style');
-                style.id = 'anim-pulse';
-                style.innerHTML = `@keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }`;
-                document.head.appendChild(style);
-            }
-
-            try {
-                mostrarProgreso('Validando credenciales...', '🔐', '#3b82f6'); 
-                
-                const urlLogin = new URL(API_URL);
-                urlLogin.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
-                urlLogin.searchParams.append('action', 'login');
-                urlLogin.searchParams.append('usuario', result.user);
-                urlLogin.searchParams.append('contrasena', result.pass);
-                urlLogin.searchParams.append('sessionId', 'repair_check_' + Date.now());
-
-                const loginRes = await new Promise(resolve => {
-                    safeSendMessage({ action: 'proxy_fetch', url: urlLogin.toString(), options: { method: 'GET' } }, resolve);
-                });
-
-                if (!loginRes || !loginRes.success || !loginRes.data || !loginRes.data.success) {
-                    throw new Error('Contraseña Incorrecta');
-                }
-
-                mostrarProgreso('Borrando sesiones activas...', '🔥', '#ef4444'); 
-                
-                const urlKill = new URL(API_URL);
-                urlKill.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
-                urlKill.searchParams.append('action', 'kill_all');
-                urlKill.searchParams.append('usuario', result.user);
-                
-                await new Promise(resolve => {
-                    safeSendMessage({ action: 'proxy_fetch', url: urlKill.toString(), options: { method: 'GET' } }, resolve);
-                });
-
-                mostrarProgreso('Reiniciando extensión...', '♻️', '#f59e0b'); 
-                
-                if (localStorage.getItem('usuarioLogueado')) logoutAndClean(); 
-                localStorage.clear(); sessionStorage.clear();
-                try { if (chrome && chrome.storage && chrome.storage.local) chrome.storage.local.clear(); } catch(e) {}
-                
-                mostrarProgreso('¡Restauración Completa!', '✅', '#10b981'); 
-                
-                setTimeout(() => window.location.reload(true), 1500);
-
-            } catch (e) {
-                btn.innerHTML = '<span style="font-size:24px; font-weight:bold; padding-bottom:4px; padding-right:2px;">↺</span>';
-                mostrarProgreso(e.message || 'Fallo de conexión', '❌', '#ef4444');
-                setTimeout(() => {
-                    const cartel = document.getElementById('toast-reparacion');
-                    if (cartel) {
-                        cartel.style.opacity = '0';
-                        setTimeout(() => cartel.remove(), 300);
-                    }
-                }, 4000);
-            }
-        };
+        btn.onclick = window.SST_GLOBAL_REPAIR;
         document.body.appendChild(btn);
-    }
+    } // <--- ¡ESTA LLAVE FALTABA Y ROMPÍA TODO TU MENÚ!
+
     function logoutAndClean() {
         const user = localStorage.getItem('usuarioLogueado');
         const sessId = localStorage.getItem('sessionId');
@@ -863,7 +1443,8 @@ function checkRepairButton() {
             Object.assign(inp.style, {
                 width: '100%', padding: '15px 50px 15px 25px', borderRadius: '50px',
                 border: '2px solid rgba(255,255,255,0.4)', backgroundColor: 'rgba(255,255,255,0.1)',
-                color: '#fff', fontSize: '16px', outline: 'none', textAlign: 'left', transition: 'all 0.3s', boxSizing: 'border-box'
+                color: '#fff', fontSize: '16px', outline: 'none', textAlign: 'left', transition: 'all 0.3s', boxSizing: 'border-box',
+                userSelect: 'auto', WebkitUserSelect: 'auto' // <-- AÑADIDO PARA BLINDAJE
             });
             const icon = document.createElement('span');
             if (type === 'password') {
@@ -1011,7 +1592,8 @@ function checkRepairButton() {
                 const res = (response && response.success) ? response.data : { success: false, message: response?.error || 'Error de conexión' };
                 
                 if (res.forceUpdate) {
-                    msgBox.innerText = '⚠️ ACTUALIZACIÓN REQUERIDA. USA CTRL+SHIFT+Z'; 
+                    const isMacMsg = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+                    msgBox.innerText = `⚠️ ACTUALIZACIÓN REQUERIDA. USA ${isMacMsg ? '⌘' : 'CTRL'}+SHIFT+Z`; 
                     msgBox.style.color = '#fbbf24';
                     btnLogin.style.display = 'none';
                     btnRepair.style.display = 'block';
@@ -1485,6 +2067,42 @@ function checkRepairButton() {
             const toast = document.getElementById('notif-' + id);
             if (toast) closeThisToast(toast);
         }
+
+        // 🚪 6. SINCRONIZACIÓN MAESTRA DE LOGOUT (Muestra modal o lo cancela en vivo)
+        if (e.key === 'SST_SYNC_SHOW_LOGOUT' && e.newValue) {
+            window.dispatchEvent(new CustomEvent('SST_SHOW_LOGOUT_PROMPT'));
+        }
+        if (e.key === 'SST_SYNC_CANCEL_LOGOUT' && e.newValue) {
+            document.getElementById('sst-logout-modal-sync')?.remove();
+        }
+
+        // 🧹 6. AVISO VISUAL DE CACHÉ BORRADO DESDE OTRA PESTAÑA
+        if (e.key === 'SST_CACHE_CLEARED' && e.newValue) {
+            const aviso = document.createElement('div');
+            aviso.innerText = '🧹 Sistema optimizado en otra pestaña';
+            Object.assign(aviso.style, {
+                position: 'fixed', bottom: '20px', left: '20px', background: 'rgba(34, 211, 238, 0.95)', 
+                color: '#000', padding: '10px 20px', borderRadius: '8px', zIndex: '2147483647',
+                fontWeight: 'bold', fontSize: '13px', boxShadow: '0 5px 15px rgba(0,0,0,0.5)',
+                transition: 'opacity 0.5s', opacity: '0', pointerEvents: 'none'
+            });
+            document.body.appendChild(aviso);
+            requestAnimationFrame(() => aviso.style.opacity = '1');
+            setTimeout(() => {
+                aviso.style.opacity = '0';
+                setTimeout(() => aviso.remove(), 500);
+            }, 3000);
+        }
+
+        // 🛠️ 7. SINCRONIZACIÓN DE "RESTABLECER" (Solo reacciona la página principal/listado)
+        if (e.key === 'SST_SYNC_REPAIR' && e.newValue) {
+            if (!window.location.href.includes('/detail')) {
+                if (typeof window.SST_GLOBAL_REPAIR === 'function') window.SST_GLOBAL_REPAIR();
+            }
+        }
+
+        // (El evento de sincronizar la alerta de Cierre de Sesión se ha eliminado)
+        // La sesión se cierra globalmente por la red gracias al borrado de 'usuarioLogueado'
     });
 
     // 2. DISPARO INMEDIATO AL ACTIVAR PESTAÑA (🔥 FIX CLAVE)
@@ -1541,7 +2159,10 @@ function checkRepairButton() {
     }, 1000);
 
     window.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
+        const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+        const modifierKey = isMac ? e.metaKey : e.ctrlKey;
+        
+        if (modifierKey && e.shiftKey && (e.key === 'z' || e.key === 'Z')) {
             const btnRepair = document.getElementById('crm-hidden-repair-btn');
             const btnLogin = document.getElementById('crm-main-login-btn');
             
