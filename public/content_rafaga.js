@@ -575,6 +575,9 @@
             const tokenDetectado = obtenerTokenAutomatico() || "";
             let clicsTitulo = 0;
 
+            const isMacUI = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
+            const atajoTexto = isMacUI ? '⌘+Shift+Z' : 'Ctrl+Shift+Z';
+
             header.innerHTML = `
                 <div style="display:flex; align-items:center; gap:15px; padding-right: 30px; width: 100%;">
                     <span id="titulo-panel" style="cursor:pointer; white-space:nowrap; user-select:none;">📋 Base de datos</span>
@@ -583,7 +586,7 @@
                                style="width: 100%; background: #1e293b; color: #34d399; border: 1px solid #334155; border-radius: 4px; padding: 4px 8px; font-size: 10px; outline: none; font-family: monospace; cursor: default; user-select: none;">
                         <div id="escudo-token" style="position:absolute; top:0; left:0; width:100%; height:100%; z-index:10; cursor:default;"></div>
                     </div>
-                    <span style="font-size:11px; font-weight:normal; color:#94a3b8; background:#0f172a; padding:2px 6px; border-radius:4px; user-select:none;">Ctrl+Shift+Z</span>
+                    <span style="font-size:11px; font-weight:normal; color:#94a3b8; background:#0f172a; padding:2px 6px; border-radius:4px; user-select:none;">${atajoTexto}</span>
                 </div>
                 <button type="button" id="btn-cerrar-panel" style="background:none; border:none; color:#f87171; cursor:pointer; font-size:18px; line-height:1;">✖</button>
             `;
@@ -1020,7 +1023,7 @@
     }; 
 
     window.addEventListener('keydown', (e) => {
-        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const isMac = navigator.userAgent.toUpperCase().indexOf('MAC OS') >= 0 || (navigator.userAgentData && navigator.userAgentData.platform === 'macOS');
         const modifierKey = isMac ? e.metaKey : e.ctrlKey;
         if (modifierKey && e.shiftKey && e.code === 'KeyZ') {
             e.preventDefault();
@@ -1065,7 +1068,8 @@
     let lastUrl = location.href;
 
     (async () => {
-        if (localStorage.getItem('PANEL_RAFAGA_VISIBLE') === null) localStorage.setItem('PANEL_RAFAGA_VISIBLE', 'true');
+        // 🔥 MODIFICADO: Ahora el panel inicia OCULTO ('false') por defecto la primera vez
+        if (localStorage.getItem('PANEL_RAFAGA_VISIBLE') === null) localStorage.setItem('PANEL_RAFAGA_VISIBLE', 'false');
         
         let estadoInicialMora = 'false'; 
         if (window.location.href.includes('/detail3')) estadoInicialMora = 'true';
