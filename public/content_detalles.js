@@ -131,9 +131,13 @@
         btn.onmouseleave = () => { if(!btn.disabled) Object.assign(btn.style, baseStyle); };
     };
 
-    function waitForText(selector, text, timeout = 4000) {
+    function waitForText(selector, textOrArray, timeout = 4000) {
         return new Promise((resolve) => {
-            const check = () => Array.from(document.querySelectorAll(selector)).find(el => el.textContent.toLowerCase().includes(text.toLowerCase()));
+            const arrTexts = Array.isArray(textOrArray) ? textOrArray : [textOrArray];
+            const check = () => Array.from(document.querySelectorAll(selector)).find(el => {
+                const elText = el.textContent.toLowerCase();
+                return arrTexts.some(t => elText.includes(t.toLowerCase()));
+            });
             if (check()) return resolve(check());
             const i = setInterval(() => { const f = check(); if(f) { clearInterval(i); resolve(f); } }, 100);
             setTimeout(() => { clearInterval(i); resolve(null); }, timeout);
@@ -228,7 +232,7 @@
             const targetRadio = await waitForText('.el-radio-button__inner', radioKeyword, 15000);
             if (targetRadio) targetRadio.click();
             
-            const noAnswerRadio = await waitForText('.el-radio-button__inner', 'No contestado', 15000);
+            const noAnswerRadio = await waitForText('.el-radio-button__inner', ['No contestado', 'Não Atendido'], 15000);
             if (noAnswerRadio) noAnswerRadio.click();
 
             const textarea = await waitForElement('textarea.el-textarea__inner', 15000);
@@ -254,7 +258,7 @@
             // Dale 600ms a Vue para que actualice su DOM virtual internamente
             await new Promise(r => setTimeout(r, 600)); 
             
-            const submitBtn = await waitForText('button span', 'Entregar los resultados', 10000);
+            const submitBtn = await waitForText('button span', ['Entregar los resultados', 'Enviar Resultado do Acompanhamento'], 10000);
             if (submitBtn) {
                 submitBtn.click();
                 localStorage.setItem('crm_task_' + TAB_ID, 'done');
@@ -501,9 +505,9 @@
             panel.appendChild(btn);
         };
 
-        createBtn('btn-yomismo', '👤 Yo Mismo', '#3b82f6', 'yoMismo', 'Yo mismo');
-        createBtn('btn-em1', '🚨 Emergencia 1', '#ef4444', 'emergencia1', 'emergencia 1');
-        createBtn('btn-em2', '🚨 Emergencia 2', '#f97316', 'emergencia2', 'emergencia 2');
+        createBtn('btn-yomismo', '👤 Yo Mismo', '#3b82f6', 'yoMismo', ['Yo mismo', 'Próprio']);
+        createBtn('btn-em1', '🚨 Emergencia 1', '#ef4444', 'emergencia1', ['emergencia 1', 'Contato de Emergência 1']);
+        createBtn('btn-em2', '🚨 Emergencia 2', '#f97316', 'emergencia2', ['emergencia 2', 'Contato de Emergência 2']);
 
         const actionRow = document.createElement('div');
         actionRow.style.cssText = 'display: flex; gap: 5px; margin-top: 2px;';
@@ -663,7 +667,7 @@
 
         botones.forEach(btn => {
             const texto = btn.innerText.toLowerCase();
-            if (texto.includes('emergencia 1') || texto.includes('emergencia 2')) {
+            if (texto.includes('emergencia 1') || texto.includes('emergencia 2') || texto.includes('emergência 1') || texto.includes('emergência 2')) {
                 btn.style.setProperty('display', 'none', 'important');
             }
         });
