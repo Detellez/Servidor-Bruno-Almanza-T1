@@ -104,7 +104,14 @@
     const getSavedNames = () => { try { return JSON.parse(localStorage.getItem('SOCIAL_NAMES_CACHE') || '{}'); } catch (e) { return {}; } };
     const saveName = (url, name) => { const cache = getSavedNames(); cache[url] = name; localStorage.setItem('SOCIAL_NAMES_CACHE', JSON.stringify(cache)); };
     function getCurrentConfig() { const url = window.location.href; return CONFIG_CRMS.find(c => c.domains.some(d => url.startsWith(d))) || null; }
-    const scrapeField = (l) => { const el = [...document.querySelectorAll("div.mb-10")].find(e => e.innerText.trim().startsWith(l)); return el ? (el.innerText.includes(":") ? el.innerText.substring(el.innerText.indexOf(":")+1).trim() : "") : ""; };
+    const scrapeField = (labels) => { 
+        const arrLabels = Array.isArray(labels) ? labels : [labels];
+        const el = [...document.querySelectorAll("div.mb-10")].find(e => {
+            const text = e.innerText.trim();
+            return arrLabels.some(lbl => text.startsWith(lbl));
+        }); 
+        return el ? (el.innerText.includes(":") ? el.innerText.substring(el.innerText.indexOf(":")+1).trim() : "") : ""; 
+    };
     
     // 🔥 HELPER NUEVO: Convierte a "Formato Título" (Title Case)
     const toTitleCase = (str) => {
@@ -279,7 +286,7 @@
 
         const socialActions = [
             { name: "TikTok", color: "#000000", icon: "🎵", u: n => `https://www.tiktok.com/search/user?q=${encodeURIComponent(n)}` },
-            { name: "Telegram", color: "#0088cc", icon: "✈️", u: () => `tg://resolve?phone=${config.prefix.replace('+','')}${scrapeField("Teléfono").replace(/\D/g, '')}` },
+            { name: "Telegram", color: "#0088cc", icon: "✈️", u: () => `tg://resolve?phone=${config.prefix.replace('+','')}${scrapeField(["Teléfono", "Celular Pessoal"]).replace(/\D/g, '')}` },
             { name: "Facebook", color: "#1877f2", icon: "📘", u: n => `https://www.facebook.com/search/top/?q=${encodeURIComponent(n)}` },
             { name: "Instagram", color: "#E1306C", icon: "📸", u: n => `https://www.google.com/search?q=${encodeURIComponent('site:instagram.com ' + n)}` }
         ];
@@ -299,7 +306,7 @@
                 if (s.name === "Telegram") window.location.href = s.u();
                 else {
                     // 🔥 MODIFICACIÓN: Aplicamos toTitleCase aquí
-                    const rawName = (getSavedNames()[window.location.href] || scrapeField("Nombre")).replace(/[0-9%]/g, '').trim();
+                    const rawName = (getSavedNames()[window.location.href] || scrapeField(["Nombre", "Nome do Usuário"])).replace(/[0-9%]/g, '').trim();
                     window.open(s.u(toTitleCase(rawName)), '_blank');
                 }
                 panel.style.display = 'none'; toggleBtn.style.display = 'flex';
@@ -357,7 +364,7 @@
         const imgs = extractImages();
         const src = imgs[0]?.src || ""; 
         const url = window.location.href;
-        const val = getSavedNames()[url] || scrapeField("Nombre").replace(/[0-9%]/g, '').trim();
+        const val = getSavedNames()[url] || scrapeField(["Nombre", "Nome do Usuário"]).replace(/[0-9%]/g, '').trim();
         mState = { scale: 1, posX: 0, posY: 0, isDragging: false };
 
         const ov = document.createElement("div"); ov.id = "manual-search-overlay";
