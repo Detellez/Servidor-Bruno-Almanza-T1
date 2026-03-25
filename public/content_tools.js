@@ -20,9 +20,9 @@
 
     const REFERENCE_LABELS = [
         "Hermano/Hermana", "Padre/Madre", "Cónyuge", "Hijo/Hija", 
-        "Amigo", "Colega", "Otros", "Referencia"
+        "Amigo", "Colega", "Otros", "Irmão/Irmã", "Pai/Mãe", "Cônjuge", "Filho/Filha", 
+        "Amigos", "Pais", "Outros", "Filhos", "Irmãos", "Referência", "Referencia"
     ];
-    
     const RUTAS_PERMITIDAS = ["/detail2", "/detail3"];
     
     const Z_UI_LAYER = "2147483643"; 
@@ -68,14 +68,18 @@
     // 3. UTILIDADES DE EXTRACCIÓN
     
     // 🔥 Lector exacto de la tabla oculta de Variousplan
-    const obtenerValorTablaVarious = (nombreColumna) => {
+    const obtenerValorTablaVarious = (columnas) => {
         try {
+            const arrayColumnas = Array.isArray(columnas) ? columnas : [columnas];
             const pane = document.getElementById('pane-fourth');
             if (!pane) return '';
             const headerWrapper = pane.querySelector('.el-table__header-wrapper');
             if (!headerWrapper) return '';
             const headers = Array.from(headerWrapper.querySelectorAll('th .cell'));
-            const index = headers.findIndex(h => (h.textContent || '').trim().toLowerCase().includes(nombreColumna.toLowerCase()));
+            const index = headers.findIndex(h => {
+                const textoHeader = (h.textContent || '').trim().toLowerCase();
+                return arrayColumnas.some(col => textoHeader.includes(col.toLowerCase()));
+            });
             if (index === -1) return '';
             const bodyWrapper = pane.querySelector('.el-table__body-wrapper');
             if (!bodyWrapper) return '';
@@ -87,9 +91,12 @@
         } catch(e) { return ''; }
     };
 
-    const getTextAfterLabel = (label) => {
-        // 🔥 MAGIA: Usamos textContent en lugar de innerText
-        const el = [...document.querySelectorAll("div.mb-10")].find(el => (el.textContent || "").includes(label));
+    const getTextAfterLabel = (labels) => {
+        const arrayLabels = Array.isArray(labels) ? labels : [labels];
+        const el = [...document.querySelectorAll("div.mb-10")].find(el => {
+            const text = (el.textContent || "").trim();
+            return arrayLabels.some(lbl => text.includes(lbl));
+        });
         if (!el) return "";
         const clone = el.cloneNode(true);
         clone.querySelectorAll('button').forEach(b => b.remove());
@@ -109,7 +116,7 @@
 
     function getIDCorrecto() {
         const isVarious = window.location.href.includes("variousplan.com");
-        const etiquetaBusqueda = isVarious ? "ID de orden" : "ID Plan de pago";
+        const etiquetaBusqueda = isVarious ? "ID de orden" : ["ID Plan de pago", "ID do Plano de Pagamento"];
         const valor = getTextAfterLabel(etiquetaBusqueda);
         return isVarious ? valor : 'p' + valor;
     }
@@ -137,7 +144,7 @@
 
 function procesarTags(texto) {
         const countryInfo = getCountryData(); 
-        const valNombre = fixSpacing(getTextAfterLabel("Nombre"));
+        const valNombre = fixSpacing(getTextAfterLabel(["Nombre", "Nome do Usuário"]));
         
         // --- INICIO LÓGICA LINK ---
         let valLink = "";
@@ -161,11 +168,11 @@ function procesarTags(texto) {
         }
         // --- FIN LÓGICA LINK ---
 
-        const valProducto = fixSpacing(getTextAfterLabel("Nombre del producto"));
-        const valDeuda = getTextAfterLabel("Pago completo de la factura");
-        const valProrroga = getTextAfterLabel("Importe de la factura de reinversión");
-        const valTelefono = countryInfo.prefix.replace('+','') + getTextAfterLabel("Teléfono");
-        const valPlazoTotal = getTextAfterLabel("Total de plazos");
+        const valProducto = fixSpacing(getTextAfterLabel(["Nombre del producto", "Nome do Produto"]));
+        const valDeuda = getTextAfterLabel(["Pago completo de la factura", "Valor Total da Fatura"]);
+        const valProrroga = getTextAfterLabel(["Importe de la factura de reinversión", "Valor da Fatura de Extensão"]);
+        const valTelefono = countryInfo.prefix.replace('+','') + getTextAfterLabel(["Teléfono", "Celular Pessoal"]);
+        const valPlazoTotal = getTextAfterLabel(["Total de plazos", "Total de parcelas"]);
         
         // Detectamos si estamos en detail3 y en Variousplan
         const isDetail3 = window.location.href.includes("/detail3");
@@ -180,14 +187,14 @@ function procesarTags(texto) {
         if (isDetail3) {
             if (isVarious) {
                 // Lee directamente desde la tabla
-                valDiasMora = obtenerValorTablaVarious("Días de mora");
-                valCargoMora = obtenerValorTablaVarious("Cargo por mora");
+                valDiasMora = obtenerValorTablaVarious(["Días de mora", "Dias de Atraso"]);
+                valCargoMora = obtenerValorTablaVarious(["Cargo por mora", "Taxa de Atraso"]);
                 valMontoPago = obtenerValorTablaVarious("Monto del Contrato");
             } else {
                 // Modo normal para Cashimex, CredNotas, etc.
-                valDiasMora = getTextAfterLabel("Días de mora");
-                valCargoMora = getTextAfterLabel("Cargo por mora");
-                valMontoPago = getTextAfterLabel("Monto de pago");
+                valDiasMora = getTextAfterLabel(["Días de mora", "Dias de Atraso"]);
+                valCargoMora = getTextAfterLabel(["Cargo por mora", "Taxa de Atraso"]);
+                valMontoPago = getTextAfterLabel(["Monto de pago", "Valor a Pagar"]);
             }
         }
 
@@ -621,7 +628,7 @@ function procesarTags(texto) {
             const refs = [];
             document.querySelectorAll('div.mb-10').forEach(div => {
                 const text = div.textContent || ""; // 🔥 MAGIA AQUÍ TAMBIÉN
-                const match = REFERENCE_LABELS.find(l => text.includes(l) && !text.includes("Teléfono") && !text.includes("Correo"));
+                const match = REFERENCE_LABELS.find(l => text.includes(l) && !text.includes("Teléfono") && !text.includes("Celular Pessoal") && !text.includes("Correo") && !text.includes("E-mail"));
                 if (match) {
                     const cleanNum = text.split(':')[1]?.trim().replace(/[^0-9]/g, '');
                     if (cleanNum && cleanNum.length >= countryInfo.digits) {
@@ -634,7 +641,7 @@ function procesarTags(texto) {
             for (const r of refs) { if (!seen.has(r.number)) { seen.add(r.number); uniqueRefs.push(r); } }
             return uniqueRefs;
         };
-        const clientPhoneClean = getTextAfterLabel("Teléfono");
+        const clientPhoneClean = getTextAfterLabel(["Teléfono", "Celular Pessoal"]);
         const clientPhoneFinal = clientPhoneClean ? (prefixClean + clientPhoneClean) : null;
         const references = getAllReferences();
 
@@ -696,38 +703,38 @@ function procesarTags(texto) {
 
         createBtn('Exportar', '📂', '#f59e0b', () => {
             let id = getIDCorrecto(); const prefixClean = countryInfo.prefix.replace('+', ''); 
-            const refs = REFERENCE_LABELS.map(l => { if(l === "Teléfono" || l === "Correo electrónico") return ""; const v = getTextAfterLabel(l); return v ? `${l}\t${prefixClean}${v.replace(/[^0-9]/g, '').slice(-countryInfo.digits)}` : ""; }).filter(x => x);
+            const refs = REFERENCE_LABELS.map(l => { if(["Teléfono", "Celular Pessoal", "Correo electrónico", "E-mail Pessoal", "Correo"].includes(l)) return ""; const v = getTextAfterLabel(l); return v ? `${l}\t${prefixClean}${v.replace(/[^0-9]/g, '').slice(-countryInfo.digits)}` : ""; }).filter(x => x);
             
             // 🔥 Exportación inteligente según detail2 o detail3
             const isDetail3 = window.location.href.includes("/detail3");
             const isVarious = window.location.href.includes("variousplan.com");
             const baseData = [
-                id, getTextAfterLabel("Nombre"), (document.querySelector("span.el-tooltip")?.innerText || ""), 
-                getTextAfterLabel("Nombre del producto"), getTextAfterLabel("Pago completo de la factura"), 
-                getTextAfterLabel("Importe de la factura de reinversión")
+                id, getTextAfterLabel(["Nombre", "Nome do Usuário"]), (document.querySelector("span.el-tooltip")?.innerText || ""), 
+                getTextAfterLabel(["Nombre del producto", "Nome do Produto"]), getTextAfterLabel(["Pago completo de la factura", "Valor Total da Fatura"]), 
+                getTextAfterLabel(["Importe de la factura de reinversión", "Valor da Fatura de Extensão"])
             ];
 
             // Solo agregamos las columnas de mora si es detail3
             if (isDetail3) {
                 if (isVarious) {
                     baseData.push(
-                        obtenerValorTablaVarious("Días de mora"), 
-                        obtenerValorTablaVarious("Cargo por mora"), 
+                        obtenerValorTablaVarious(["Días de mora", "Dias de Atraso"]), 
+                        obtenerValorTablaVarious(["Cargo por mora", "Taxa de Atraso"]), 
                         obtenerValorTablaVarious("Monto del Contrato")
                     );
                 } else {
                     baseData.push(
-                        getTextAfterLabel("Días de mora"), 
-                        getTextAfterLabel("Cargo por mora"), 
-                        getTextAfterLabel("Monto de pago")
+                        getTextAfterLabel(["Días de mora", "Dias de Atraso"]), 
+                        getTextAfterLabel(["Cargo por mora", "Taxa de Atraso"]), 
+                        getTextAfterLabel(["Monto de pago", "Valor a Pagar"])
                     );
                 }
             }
 
             // Agregamos correo, teléfono y referencias al final
             baseData.push(
-                getTextAfterLabel("Correo electrónico"), 
-                (prefixClean + getTextAfterLabel("Teléfono")), 
+                getTextAfterLabel(["Correo electrónico", "E-mail Pessoal"]), 
+                (prefixClean + getTextAfterLabel(["Teléfono", "Celular Pessoal"])), 
                 ...refs
             );
 
@@ -735,7 +742,7 @@ function procesarTags(texto) {
             
             navigator.clipboard.writeText(txt).then(() => mostrarAvisoTemporal(`Datos exportados ✅`));
         });
-        createBtn('Correo', '📧', '#8b5cf6', () => { const c = getTextAfterLabel("Correo electrónico"); navigator.clipboard.writeText(c).then(() => mostrarAvisoTemporal(`Copiado: ${c} 📧`)); });
+        createBtn('Correo', '📧', '#8b5cf6', () => { const c = getTextAfterLabel(["Correo electrónico", "E-mail Pessoal"]); navigator.clipboard.writeText(c).then(() => mostrarAvisoTemporal(`Copiado: ${c} 📧`)); });
         createSectionTitle("TELÉFONO CLIENTE"); createDoubleBtnRow(clientPhoneFinal);
         if (references.length > 0) { createSectionTitle("TELÉFONO REFERENCIAS"); references.forEach(ref => { createDoubleBtnRow(ref.number); }); }
 
@@ -766,7 +773,7 @@ function procesarTags(texto) {
         // 3. SI NO ESTÁ EN CACHÉ, NOS TOCA BUSCAR A NOSOTROS (MODAL)
         try {
             const botones = Array.from(document.querySelectorAll('button span'));
-            const btnFundamento = botones.find(span => span.innerText.trim() === "Fundamento de desembolso");
+            const btnFundamento = botones.find(span => span.innerText.trim() === "Fundamento de desembolso" || span.innerText.trim() === "Ver Comprovante de Desembolso");
 
             if (!btnFundamento) return "No disponible";
 
@@ -834,12 +841,12 @@ function procesarTags(texto) {
                 btn.onclick = (e) => { e.stopPropagation(); navigator.clipboard.writeText(textoACopiar).then(() => mostrarAvisoTemporal(`Copiado: ${textoACopiar} 📋`, 1500)); };
                 return btn;
             };
-            if (texto.startsWith("Correo electrónico") && !div.classList.contains('js-copy-added')) {
+            if ((texto.startsWith("Correo electrónico") || texto.startsWith("E-mail Pessoal")) && !div.classList.contains('js-copy-added')) {
                 const mailClean = texto.split(":")[1]?.trim(); if (mailClean && mailClean.includes("@")) { div.classList.add('js-copy-added'); div.prepend(crearBotonEmoji(mailClean, "Copiar correo")); }
             }
         });
         const allSpans = Array.from(document.querySelectorAll('button span'));
-        const callSpans = allSpans.filter(s => (s.textContent || "").trim().toLowerCase() === "llamar"); // 🔥 MAGIA
+        const callSpans = allSpans.filter(s => (s.textContent || "").trim().toLowerCase() === "llamar" || s.textContent.trim().toLowerCase() === "contato telefônico" || s.textContent.trim().toLowerCase() === "contato telefonico"); // 🔥 MAGIA
         callSpans.forEach(span => {
             const botonOriginal = span.closest('button'); if (!botonOriginal || botonOriginal.dataset.hijacked) return;
             const containerActual = botonOriginal.closest('div.mb-10'); const containerAnterior = containerActual ? containerActual.previousElementSibling : null;
@@ -855,7 +862,7 @@ function procesarTags(texto) {
                 }
             }
         });
-        const waSpans = allSpans.filter(s => (s.textContent || "").trim() === "WA"); // 🔥 MAGIA
+        const waSpans = allSpans.filter(s => (s.textContent || "").trim() === "WA" || s.textContent.trim().toLowerCase() === "contato whatsapp"); // 🔥 MAGIA
         waSpans.forEach(span => {
             const botonOriginal = span.closest('button'); if (!botonOriginal || botonOriginal.dataset.hijacked) return;
             const containerActual = botonOriginal.closest('div.mb-10'); const containerAnterior = containerActual ? containerActual.previousElementSibling : null;
@@ -876,7 +883,7 @@ function renderizarBotonSoporteNativo() {
         if (document.getElementById('btn-soporte-nativo')) return;
         
         const spans = Array.from(document.querySelectorAll("button span"));
-        const targetSpan = spans.find(el => el.innerText.trim() === "Fundamento de desembolso");
+        const targetSpan = spans.find(el => el.innerText.trim() === "Fundamento de desembolso" || el.innerText.trim() === "Ver Comprovante de Desembolso");
         
         if (targetSpan) {
             const targetButton = targetSpan.closest("button"); 
@@ -899,9 +906,9 @@ function renderizarBotonSoporteNativo() {
                 btn.onclick = async () => {
                     const countryInfo = getCountryData();
                     const appName = document.querySelector("span.el-tooltip")?.innerText || "N/A";
-                    const nombre = getTextAfterLabel("Nombre");
-                    const deuda = getTextAfterLabel("Pago completo de la factura");
-                    const telefono = countryInfo.prefix + getTextAfterLabel("Teléfono");
+                    const nombre = getTextAfterLabel(["Nombre", "Nome do Usuário"]);
+                    const deuda = getTextAfterLabel(["Pago completo de la factura", "Valor Total da Fatura"]);
+                    const telefono = countryInfo.prefix + getTextAfterLabel(["Teléfono", "Celular Pessoal"]);
                     let res = "";
 
                     // ---------------------------------------------------------
@@ -932,8 +939,8 @@ function renderizarBotonSoporteNativo() {
                     // 🅱️ CASO 2: RESTO DEL MUNDO (Formato Original)
                     // ---------------------------------------------------------
                     else {
-                        const prorroga = getTextAfterLabel("Importe de la factura de reinversión");
-                        const producto = getTextAfterLabel("Nombre del producto");
+                        const prorroga = getTextAfterLabel(["Importe de la factura de reinversión", "Valor da Fatura de Extensão"]);
+                        const producto = getTextAfterLabel(["Nombre del producto", "Nome do Produto"]);
 
                         if (countryInfo.name === "Brasil") {
                             res = `${nombre}\nAplicativo: ${appName}\nProduto: ${producto}\nDivida total: R$ ${deuda}\nProrrogação: R$ ${prorroga}\nTel: ${telefono}`;
@@ -964,17 +971,21 @@ function renderizarBotonSoporteNativo() {
         // 🔥 NUEVO: Clave para controlar quién tiene el foco
         const ACTIVE_TAB_KEY = 'CRM_EDITOR_ACTIVE_TAB';
 
+        // 🇪🇸 🇧🇷 Listas Bilingües Planas
         const ALL_FIELDS = [
             "Fecha de pago", "Días de mora", "Cargo por mora", "Importe reembolsado",
             "Monto de descuento", "Montos de cupones disponibles",
-            "Pago completo de la factura", "Importe de la factura de reinversión"
+            "Pago completo de la factura", "Importe de la factura de reinversión",
+            "Data de Vencimento", "Dias de Atraso", "Taxa de Atraso", "Valor Pago",
+            "Valor da Redução", "Cupom Disponível",
+            "Valor Total da Fatura", "Valor da Fatura de Extensão"
         ];
-        const COMPACT_FIELDS = ["Pago completo de la factura", "Importe de la factura de reinversión"];
-        const LOCKED_LABELS = ["Pago completo de la factura", "Importe de la factura de reinversión"];
-        const NO_SYNC_VALUES = ["Pago completo de la factura", "Importe de la factura de reinversión"];
+        const COMPACT_FIELDS = ["Pago completo de la factura", "Importe de la factura de reinversión", "Valor Total da Fatura", "Valor da Fatura de Extensão"];
+        const LOCKED_LABELS = ["Pago completo de la factura", "Importe de la factura de reinversión", "Valor Total da Fatura", "Valor da Fatura de Extensão"];
+        const NO_SYNC_VALUES = ["Pago completo de la factura", "Importe de la factura de reinversión", "Valor Total da Fatura", "Valor da Fatura de Extensão"];
         
-        const CALC_TRIGGER = "Cargo por mora";
-        const CALC_TARGETS = ["Pago completo de la factura", "Importe de la factura de reinversión"];
+        const CALC_TRIGGERS = ["Cargo por mora", "Taxa de Atraso"];
+        const CALC_TARGETS = ["Pago completo de la factura", "Importe de la factura de reinversión", "Valor Total da Fatura", "Valor da Fatura de Extensão"];
 
         const BUTTON_TOP_POS = '275px'; 
         const SYNC_KEY = 'crm_dom_editor_cmd'; 
@@ -1065,7 +1076,7 @@ function renderizarBotonSoporteNativo() {
         const handleMoraCalculation = (newMoraVal) => { const moraNum = parseFloat(newMoraVal) || 0; CALC_TARGETS.forEach(targetKey => { if (originalState[targetKey]) { const baseAmount = originalState[targetKey].numVal; const newTotal = baseAmount + moraNum; updateDOM(targetKey, 'updateValue', newTotal); } }); };
         const applyMemoryValues = () => {
             const memory = JSON.parse(localStorage.getItem(MEMORY_KEY) || '{}'); let globalMora = 0;
-            if (memory[CALC_TRIGGER] && memory[CALC_TRIGGER].value) { globalMora = parseFloat(memory[CALC_TRIGGER].value) || 0; }
+            CALC_TRIGGERS.forEach(t => { if (memory[t] && memory[t].value) { globalMora = parseFloat(memory[t].value) || 0; } });
             Object.keys(memory).forEach(keyword => { if (memory[keyword].label) updateDOM(keyword, 'updateLabel', memory[keyword].label); if (memory[keyword].color) updateDOM(keyword, 'updateColor', memory[keyword].color); if (memory[keyword].toggle !== undefined) updateDOM(keyword, 'toggle', memory[keyword].toggle); if (memory[keyword].value !== undefined) { if (!NO_SYNC_VALUES.includes(keyword)) { updateDOM(keyword, 'updateValue', memory[keyword].value); } } });
             if (globalMora !== 0) handleMoraCalculation(globalMora);
         };
@@ -1082,7 +1093,7 @@ function renderizarBotonSoporteNativo() {
             if (!isCompact) { const header = document.createElement('div'); header.className = 'field-header'; const titleSpan = document.createElement('span'); titleSpan.className = 'field-title'; titleSpan.innerText = keyword; header.append(titleSpan, switchLabel); row.appendChild(header); }
             const inputsBody = document.createElement('div'); inputsBody.className = 'field-body';
             const inputLabel = document.createElement('input'); inputLabel.className = 'editor-input input-lbl'; inputLabel.id = `input-lbl-${safeId}`; inputLabel.value = currentLabelText; inputLabel.placeholder = "Etiqueta"; if (LOCKED_LABELS.includes(keyword)) { inputLabel.disabled = true; inputLabel.title = "Protegido"; } inputLabel.oninput = () => { updateDOM(keyword, 'updateLabel', inputLabel.value); broadcastChange('updateLabel', keyword, inputLabel.value); };
-            const inputValue = document.createElement('input'); inputValue.className = 'editor-input input-val'; inputValue.id = `input-val-${safeId}`; inputValue.value = currentValueText; inputValue.placeholder = "0"; inputValue.oninput = () => { updateDOM(keyword, 'updateValue', inputValue.value); if (keyword === CALC_TRIGGER) { handleMoraCalculation(inputValue.value); broadcastChange('moraChanged', keyword, inputValue.value); } else { broadcastChange('updateValue', keyword, inputValue.value); } };
+            const inputValue = document.createElement('input'); inputValue.className = 'editor-input input-val'; inputValue.id = `input-val-${safeId}`; inputValue.value = currentValueText; inputValue.placeholder = "0"; inputValue.oninput = () => { updateDOM(keyword, 'updateValue', inputValue.value); if (CALC_TRIGGERS.includes(keyword)) { handleMoraCalculation(inputValue.value); broadcastChange('moraChanged', keyword, inputValue.value); } else { broadcastChange('updateValue', keyword, inputValue.value); } };
             const trafficLight = document.createElement('div'); trafficLight.className = 'traffic-light';
             const createDot = (color, cssClass) => { const dot = document.createElement('div'); dot.className = `color-dot ${cssClass}`; dot.onclick = () => { updateDOM(keyword, 'updateColor', color); broadcastChange('updateColor', keyword, color); }; return dot; };
             trafficLight.append(createDot('#ff0000', 'bg-red'), createDot('#008000', 'bg-green'), createDot('#000000', 'bg-black'));
@@ -1100,14 +1111,13 @@ function renderizarBotonSoporteNativo() {
             const actionsDiv = document.createElement('div'); actionsDiv.className = 'header-actions';
             const resetBtn = document.createElement('button'); resetBtn.className = 'reset-btn'; resetBtn.innerHTML = '↺'; resetBtn.onclick = () => { if(confirm('¿Restablecer todo a valores originales?')) { localStorage.removeItem(MEMORY_KEY); ALL_FIELDS.forEach(f => updateDOM(f, 'reset', null)); broadcastChange('globalReset', 'ALL', null); } };
             const closeBtn = document.createElement('span'); closeBtn.className = 'close-btn'; closeBtn.innerHTML = '×'; 
-            closeBtn.onclick = () => { togglePanelVisuals(false); }; // Cierre simple visual
+            closeBtn.onclick = () => { togglePanelVisuals(false); }; 
             actionsDiv.append(resetBtn, closeBtn); pHeader.append(titleText, actionsDiv);
             const rowsContainer = document.createElement('div'); rowsContainer.style.cssText = "display:flex; flex-direction:column; gap:4px;";
             ALL_FIELDS.forEach(field => { const targetEl = findTargetElement(field); if (targetEl) rowsContainer.appendChild(createEditorRow(field, targetEl)); });
             if (rowsContainer.children.length === 0) { rowsContainer.innerHTML = `<div style="text-align:center; color:#94a3b8; font-size:11px; padding:15px;">Sin datos...</div>`; }
             panel.appendChild(pHeader); panel.appendChild(rowsContainer);
             
-            // 🔥 MODIFICADO: Lógica de exclusividad al abrir
             btn.onclick = () => { 
                 rowsContainer.innerHTML = ''; 
                 ALL_FIELDS.forEach(field => { const targetEl = findTargetElement(field); if (targetEl) rowsContainer.appendChild(createEditorRow(field, targetEl)); }); 
@@ -1119,13 +1129,12 @@ function renderizarBotonSoporteNativo() {
             };
             
             document.body.appendChild(btn); document.body.appendChild(panel);
-            // Solo abrimos si nosotros tenemos el foco (poco probable en init, pero por si acaso)
             if (localStorage.getItem(ACTIVE_TAB_KEY) === EDITOR_TAB_ID) { btn.onclick(); } else { applyMemoryValues(); }
         };
 
         // Listeners del Editor
         window.addEventListener('storage', (e) => {
-            if (e.key === SYNC_KEY && e.newValue) { const cmd = JSON.parse(e.newValue); if (Date.now() - cmd.id < 1000) { if (cmd.action === 'moraChanged') { handleMoraCalculation(cmd.payload); updateDOM(CALC_TRIGGER, 'updateValue', cmd.payload); } else if (cmd.action === 'globalReset') { localStorage.removeItem(MEMORY_KEY); ALL_FIELDS.forEach(f => updateDOM(f, 'reset', null)); } else { updateDOM(cmd.keyword, cmd.action, cmd.payload); } } }
+            if (e.key === SYNC_KEY && e.newValue) { const cmd = JSON.parse(e.newValue); if (Date.now() - cmd.id < 1000) { if (cmd.action === 'moraChanged') { handleMoraCalculation(cmd.payload); CALC_TRIGGERS.forEach(t => { if(originalState[t]) updateDOM(t, 'updateValue', cmd.payload); }); } else if (cmd.action === 'globalReset') { localStorage.removeItem(MEMORY_KEY); ALL_FIELDS.forEach(f => updateDOM(f, 'reset', null)); } else { updateDOM(cmd.keyword, cmd.action, cmd.payload); } } }
             
             // 🔥 NUEVO: Lógica de Exclusión Mutua (Como Detalles)
             if (e.key === ACTIVE_TAB_KEY && e.newValue && e.newValue !== EDITOR_TAB_ID) {
@@ -1147,7 +1156,6 @@ function renderizarBotonSoporteNativo() {
             }
         }).observe(document, { subtree: true, childList: true });
     }
-
     // =============================================================================
     // ------------------- INICIALIZACIÓN GLOBAL (TOOLS) -------------------------
     // =============================================================================
@@ -1194,7 +1202,7 @@ function renderizarBotonSoporteNativo() {
     let intentoCarga = 0;
     
     function crmTieneDatosReales() {
-        const valTelefono = getTextAfterLabel("Teléfono").replace(/[^0-9]/g, '');
+        const valTelefono = getTextAfterLabel(["Teléfono", "Celular Pessoal"]).replace(/[^0-9]/g, '');
         return valTelefono.length >= 8; 
     }
 
