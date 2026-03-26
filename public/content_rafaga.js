@@ -83,6 +83,42 @@
                 box-shadow: 0 0 10px rgba(59,130,246,0.8); 
                 cursor: text; 
             }
+            
+            /* 🔥 ESTILOS PARA TOOLTIP DE PREVISUALIZACIÓN 🔥 */
+            #rafaga-tooltip {
+                position: fixed;
+                pointer-events: none;
+                z-index: 2147483647;
+                background: rgba(15, 23, 42, 0.95);
+                border: 1px solid #8b5cf6;
+                border-radius: 8px;
+                padding: 12px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.8), 0 0 15px rgba(139, 92, 246, 0.4);
+                backdrop-filter: blur(10px);
+                display: none;
+                max-width: 320px;
+                color: #cbd5e1;
+                font-family: system-ui, -apple-system, sans-serif;
+                font-size: 12px;
+                word-wrap: break-word;
+            }
+            #rafaga-tooltip img {
+                max-width: 280px;
+                max-height: 280px;
+                border-radius: 6px;
+                display: block;
+                margin-bottom: 6px;
+                border: 1px solid #475569;
+                background: #0f172a;
+            }
+            .celda-hover-info {
+                text-decoration: underline dashed #a78bfa;
+                text-underline-offset: 4px;
+                transition: color 0.2s;
+            }
+            .celda-hover-info:hover {
+                color: #d8b4fe !important;
+            }
         `;
         document.head.appendChild(style);
     };
@@ -312,6 +348,9 @@
                     let extension = c.extensionAmount || c.totalExtensionAmount || "";
                     let cargoMora = c.overdueFee || c.penaltyAmount || ""; 
                     let montoPago = c.principal || ""; 
+                    let linkDescarga = c.downloadLink || "";
+                    let dniUrl = c.idNoUrl || "";
+                    let selfUrl = c.livingNessUrl || ""; 
 
                     if (c.taskId && c.orderId && detailCalls < maxDetailCallsPerRun) {
                         detailCalls++;
@@ -340,6 +379,9 @@
                                          cargoMora = String(detJson.data.overdueFee || detJson.data.penaltyAmount || cargoMora);
                                          montoPago = String(detJson.data.principal || montoPago);
                                     }
+                                    linkDescarga = detJson.data.downloadLink || linkDescarga;
+                                    dniUrl = detJson.data.idNoUrl || dniUrl;
+                                    selfUrl = detJson.data.livingNessUrl || selfUrl;
                                 }
                             }
                         } catch(e) {}
@@ -359,7 +401,8 @@
                         monto: String(c.repayAmount || c.totalAmount || ""), importeReinv: String(extension),
                         diasMora: String(c.overdueDay || ""), cargoMora: cargoMora, montoPago: montoPago,
                         fechaConexion: c.openTime ? String(c.openTime).split(' ')[0] : '',
-                        isRepay: c.isRepay, cuenta: c.urgeUserName || "Sin Asignar" 
+                        isRepay: c.isRepay, cuenta: c.urgeUserName || "Sin Asignar",
+                        linkDescarga: linkDescarga, dniUrl: dniUrl, selfUrl: selfUrl
                     };
                 });
 
@@ -668,6 +711,14 @@
                 <div style="width: 1px; height: 20px; background: #475569; margin: 0 5px;"></div> 
                 
                 <div style="display:flex; align-items:center; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);">
+                    <label class="switch-mora" title="Muestra columnas extra (Link, DNI, Self)">
+                        <input type="checkbox" id="check-modo-etc">
+                        <span class="slider-mora"></span>
+                    </label>
+                    <span class="label-mora" id="text-modo-etc" style="margin-right:8px;">SIN ETC</span>
+                    
+                    <div style="width: 1px; height: 14px; background: #475569; margin: 0 8px;"></div>
+
                     <label class="switch-mora" title="Cambia qué datos se extraen de la ficha">
                         <input type="checkbox" id="check-modo-mora">
                         <span class="slider-mora"></span>
@@ -733,6 +784,62 @@
             tableContainer.id = 'tabla-container-rafaga';
             Object.assign(tableContainer.style, { padding: '0', overflow: 'auto', flexGrow: '1', minHeight: '100px', fontSize: '13px' });
 
+            // 🔥 Crear contenedor para previsualizaciones (Tooltip) 🔥
+            let tooltip = document.getElementById('rafaga-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'rafaga-tooltip';
+                document.body.appendChild(tooltip);
+            }
+
+            // Lógica de detección del mouse
+            tableContainer.addEventListener('mouseover', (e) => {
+                const target = e.target;
+                if (target.classList.contains('rafaga-hover-img') || target.classList.contains('rafaga-hover-text')) {
+                    const url = target.getAttribute('data-url');
+                    if (!url) return;
+                    
+                    tooltip.style.display = 'block';
+                    
+                    if (target.classList.contains('rafaga-hover-img')) {
+                        let nombreArchivo = url.split('/').pop().split('?')[0];
+                        if (nombreArchivo.length > 30) nombreArchivo = nombreArchivo.substring(0, 30) + '...';
+                        
+                        tooltip.innerHTML = `
+                            <img src="${url}" alt="Cargando imagen...">
+                            <div style="text-align:center; color:#94a3b8; font-size:10px;">📄 ${nombreArchivo}</div>
+                        `;
+                    } else {
+                        tooltip.innerHTML = `
+                            <div style="color:#34d399; font-weight:bold; margin-bottom:6px; border-bottom:1px solid #334155; padding-bottom:4px;">🔗 ENLACE DE DESCARGA:</div>
+                            <div style="word-break: break-all; color:#e2e8f0; line-height:1.4;">${url}</div>
+                        `;
+                    }
+                }
+            });
+
+            tableContainer.addEventListener('mousemove', (e) => {
+                if (tooltip.style.display === 'block') {
+                    // Posicionar cerca del cursor (offset de 15px)
+                    let x = e.clientX + 15;
+                    let y = e.clientY + 15;
+                    
+                    // Evitar que se salga de la pantalla (Derecha / Abajo)
+                    if (x + 320 > window.innerWidth) x = e.clientX - 335;
+                    if (y + 350 > window.innerHeight) y = e.clientY - tooltip.offsetHeight - 15;
+
+                    tooltip.style.left = x + 'px';
+                    tooltip.style.top = y + 'px';
+                }
+            });
+
+            tableContainer.addEventListener('mouseout', (e) => {
+                if (e.target.classList.contains('rafaga-hover-img') || e.target.classList.contains('rafaga-hover-text')) {
+                    tooltip.style.display = 'none';
+                    tooltip.innerHTML = ''; // Limpiar RAM visual
+                }
+            });
+
             const footer = document.createElement('div');
             Object.assign(footer.style, {
                 padding: '12px 20px', borderTop: '1px solid #334155', display: 'flex', justifyContent: 'space-between',
@@ -759,6 +866,22 @@
             document.getElementById('btn-cerrar-panel').onclick = (e) => { 
                 e.stopPropagation();
                 togglePanelVisibility(false); 
+            };
+
+            const checkEtc = document.getElementById('check-modo-etc');
+            const textEtc = document.getElementById('text-modo-etc');
+            const isEtcActive = localStorage.getItem('RAFAGA_MODO_ETC') === 'true';
+
+            checkEtc.checked = isEtcActive;
+            textEtc.innerText = isEtcActive ? 'CON ETC' : 'SIN ETC';
+            textEtc.style.color = isEtcActive ? '#8b5cf6' : '#94a3b8';
+
+            checkEtc.onchange = (e) => {
+                const checked = e.target.checked;
+                localStorage.setItem('RAFAGA_MODO_ETC', checked);
+                textEtc.innerText = checked ? 'CON ETC' : 'SIN ETC';
+                textEtc.style.color = checked ? '#8b5cf6' : '#94a3b8';
+                actualizarTablaLotes();
             };
 
             const checkMora = document.getElementById('check-modo-mora');
@@ -842,11 +965,19 @@
                 if (lote.length === 0) return mostrarAviso('No hay datos', '#fbbf24', 'warning');
                 
                 const isMoraActive = localStorage.getItem('RAFAGA_MODO_MORA') === 'true';
+                const isEtcActive = localStorage.getItem('RAFAGA_MODO_ETC') === 'true';
                 let filas = lote.map(c => {
                     let telLimpio = c.telefono ? String(c.telefono).replace('+', '') : '';
                     let dataFila = [ c.idPlan, telLimpio, c.nombre, c.app, c.correo, c.producto, c.monto, c.importeReinv ];
                     if (isMoraActive) {
                         dataFila.push(c.diasMora || '0', c.cargoMora || '0', c.montoPago || '0');
+                    }
+                    if (isEtcActive) {
+                        // Transformamos DNI y SELF en etiquetas <img> si existen
+                        let imgDni = c.dniUrl ? `<img src="${c.dniUrl}" style="max-width:200px;border:1px solid #ccc;" />` : '';
+                        let imgSelf = c.selfUrl ? `<img src="${c.selfUrl}" style="max-width:200px;border:1px solid #ccc;" />` : '';
+                        
+                        dataFila.push(c.linkDescarga || '', imgDni, imgSelf);
                     }
                     dataFila.push(c.fechaConexion || ''); 
                     return dataFila.join('\t');
@@ -893,6 +1024,7 @@
         }
 
         const isMoraActive = localStorage.getItem('RAFAGA_MODO_MORA') === 'true';
+        const isEtcActive = localStorage.getItem('RAFAGA_MODO_ETC') === 'true';
         const { strHoy, strAyer } = getFechasRelativas();
 
         let html = `
@@ -908,17 +1040,29 @@
                         <th style="padding:10px 15px;">Monto</th>
                         <th style="padding:10px 15px;">Reinv</th>
                         ${isMoraActive ? `
-                        <th style="padding:10px 15px;">Días Mora</th>
-                        <th style="padding:10px 15px;">Cargo Mora</th>
-                        <th style="padding:10px 15px;">Monto Pago</th>
+                        <th style="padding:10px 15px;">Días</th>
+                        <th style="padding:10px 15px;">Cargo</th>
+                        <th style="padding:10px 15px;">Contrato</th>
+                        ` : ''}
+                        ${isEtcActive ? `
+                        <th style="padding:10px 15px; color:#c084fc;">LINK</th>
+                        <th style="padding:10px 15px; color:#c084fc;">DNI</th>
+                        <th style="padding:10px 15px; color:#c084fc;">SELF</th>
                         ` : ''}
                     </tr>
                 </thead>
                 <tbody>
         `;
 
+        const cInfo = getCountryInfo();
+        const prefLen = cInfo.prefix.replace('+', '').length;
+
         loteFiltrado.forEach(c => {
             let colorFecha = '#64748b'; 
+            
+            // 🔥 Variables compactas exclusivas para visualización
+            let telVisible = (c.telefono || '').length > prefLen ? c.telefono.substring(prefLen) : c.telefono;
+            let nomVisible = (c.nombre || '').length > 22 ? c.nombre.substring(0, 22) + '...' : c.nombre; 
             if (c.fechaConexion === strHoy) colorFecha = '#34d399'; 
             else if (c.fechaConexion === strAyer) colorFecha = '#fb923c'; 
 
@@ -942,10 +1086,10 @@
 
             html += `
                 <tr class="fila-rafaga" style="border-bottom: 1px solid #334155;">
-                    <td style="padding:8px 15px; color:#60a5fa; font-weight:500;">${c.idPlan}</td>
-                    <td style="padding:8px 15px; color:#e2e8f0;">${c.telefono}</td>
-                    <td style="padding:8px 15px; line-height: 1.2;">
-                        <div>${c.nombre}</div>
+                    <td class="idplan-celda" style="padding:8px 15px; color:#60a5fa; font-weight:bold; cursor:pointer;" title="Doble clic para copiar ID">${c.idPlan}</td>
+                    <td style="padding:8px 15px; color:#e2e8f0; cursor:help;" title="${c.telefono}">${telVisible}</td>
+                    <td style="padding:8px 15px; line-height: 1.2; cursor:help;" title="${c.nombre}">
+                        <div>${nomVisible}</div>
                         ${c.fechaConexion ? `<div style="font-size: 10.5px; color: ${colorFecha}; margin-top: 2px; font-weight: 600;">🕒 ${c.fechaConexion}</div>` : ''}
                     </td>
                     <td style="padding:8px 15px; color:#cbd5e1; font-weight:bold;">${c.app}</td>
@@ -965,6 +1109,17 @@
                     <td style="padding:8px 15px; color:#f87171;">${c.cargoMora || '-'}</td>
                     <td style="padding:8px 15px; color:#34d399; font-weight:bold;">${c.montoPago || '-'}</td>
                     ` : ''}
+                    ${isEtcActive ? `
+                    <td class="link-celda" style="padding:8px 15px; color:#c084fc; cursor:pointer;" title="Doble clic para copiar Link">
+                        <span class="${c.linkDescarga ? 'celda-hover-info rafaga-hover-text' : ''}" data-url="${c.linkDescarga || ''}">${c.linkDescarga ? String(c.linkDescarga).substring(0,4) : '-'}</span>
+                    </td>
+                    <td style="padding:8px 15px; color:#c084fc; cursor:help;">
+                        <span class="${c.dniUrl ? 'celda-hover-info rafaga-hover-img' : ''}" data-url="${c.dniUrl || ''}">${c.dniUrl ? String(c.dniUrl).substring(0,4) : '-'}</span>
+                    </td>
+                    <td style="padding:8px 15px; color:#c084fc; cursor:help;">
+                        <span class="${c.selfUrl ? 'celda-hover-info rafaga-hover-img' : ''}" data-url="${c.selfUrl || ''}">${c.selfUrl ? String(c.selfUrl).substring(0,4) : '-'}</span>
+                    </td>
+                    ` : ''}
                 </tr>
             `;
         });
@@ -974,6 +1129,33 @@
         
         const btnCopy = document.getElementById('btn-copiar-lote');
         if(btnCopy) btnCopy.innerText = `Copy Datos (${loteFiltrado.length})`;
+
+        // 🔥 Evento: Doble clic para copiar ID Plan al portapapeles 🔥
+        container.querySelectorAll('.idplan-celda').forEach(celda => {
+            celda.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                const textoCopia = this.innerText.trim();
+                navigator.clipboard.writeText(textoCopia).then(() => {
+                    mostrarAviso(`🆔 ID ${textoCopia} copiado!`, '#60a5fa', 'info', 1500);
+                }).catch(err => console.error("Error al copiar: ", err));
+            });
+        });
+
+        // 🔥 Evento: Doble clic para copiar LINK al portapapeles 🔥
+        container.querySelectorAll('.link-celda').forEach(celda => {
+            celda.addEventListener('dblclick', function(e) {
+                e.stopPropagation();
+                const spanDato = this.querySelector('span');
+                if (!spanDato) return;
+                
+                const urlCompleta = spanDato.getAttribute('data-url');
+                if (urlCompleta && urlCompleta.trim() !== '') {
+                    navigator.clipboard.writeText(urlCompleta).then(() => {
+                        mostrarAviso(`🔗 Link copiado al portapapeles!`, '#c084fc', 'success', 1500);
+                    }).catch(err => console.error("Error al copiar link: ", err));
+                }
+            });
+        });
 
         container.querySelectorAll('.correo-celda').forEach(celda => {
             celda.addEventListener('dblclick', function(e) {
@@ -1070,6 +1252,7 @@
     (async () => {
         // 🔥 MODIFICADO: Ahora el panel inicia OCULTO ('false') por defecto la primera vez
         if (localStorage.getItem('PANEL_RAFAGA_VISIBLE') === null) localStorage.setItem('PANEL_RAFAGA_VISIBLE', 'false');
+        if (localStorage.getItem('RAFAGA_MODO_ETC') === null) localStorage.setItem('RAFAGA_MODO_ETC', 'true');
         
         let estadoInicialMora = 'false'; 
         if (window.location.href.includes('/detail3')) estadoInicialMora = 'true';
