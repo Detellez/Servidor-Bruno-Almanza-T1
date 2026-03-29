@@ -1922,7 +1922,7 @@ function showNotification(message, msgId, type = 'info') {
 
         // 🔥 ESCUDO ANTI-COLAPSO DE GOOGLE (Límites de Cuota)
         const lastGlobalHb = parseInt(localStorage.getItem('LAST_GLOBAL_HB_TS') || '0');
-        const umbral = fromVisibility ? 30000 : 110000; 
+        const umbral = fromVisibility ? 120000 : 240000; 
         if (Date.now() - lastGlobalHb < umbral) {
             return; 
         }
@@ -1942,13 +1942,16 @@ function showNotification(message, msgId, type = 'info') {
         let lastEval = parseInt(localStorage.getItem('LAST_EVAL_TS') || Date.now().toString());
         let elapsed = Date.now() - lastEval;
         localStorage.setItem('LAST_EVAL_TS', Date.now().toString());
-        if (elapsed > 25000) elapsed = 20000; 
+        
+        // 🔥 FIX: Adaptado a los nuevos latidos de 2 a 4 minutos
+        if (elapsed > 300000) elapsed = 120000; 
         if (elapsed < 0) elapsed = 0;
 
         let shouldUpdateExcel = false;
         if (isGloballyVisible) {
             accumulatedMs += elapsed; 
-            if (accumulatedMs >= (3 * 60 * 1000)) { 
+            // 🔥 Actualiza el Excel al acumular 2 minutos de actividad
+            if (accumulatedMs >= 120000) { 
                 shouldUpdateExcel = true;
                 accumulatedMs = 0; 
             }
@@ -2108,7 +2111,7 @@ function showNotification(message, msgId, type = 'info') {
     try {
         const workerBlob = new Blob([`
             self.onmessage = function(e) {
-                if(e.data === 'start') setInterval(() => postMessage('tick'), 20000);
+                if(e.data === 'start') setInterval(() => postMessage('tick'), 120000);
             };
         `], { type: 'application/javascript' });
         
@@ -2135,7 +2138,7 @@ function showNotification(message, msgId, type = 'info') {
                 checkLogoutButton();
                 checkRepairButton(); // <--- AÑADIDO
             }
-        }, 20000);
+        }, 120000);
     }
 
     // 🔥 BUCLE DE VIGILANCIA UI 
