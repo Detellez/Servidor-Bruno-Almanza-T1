@@ -165,16 +165,15 @@
             country: 'CRM', prefix: 'GLOBAL'
         };
 
-        // 🔥 AQUÍ ESTÁ EL AJUSTE PARA CASHIMEX 🔥
+        // 🔥 AJUSTE UNIFICADO: Todo el mundo usa la estructura de Cashimex 🔥
         const isVarious = currentUrl.includes('variousplan.com');
-        const isCashimex = currentUrl.includes('mx-crm.certislink.com');
 
-        // Asignación de columnas respetando a todos
-        const defaultSelDate = (isVarious || isCashimex) ? '.el-table_1_column_13' : '.el-table_1_column_12';
-        const defaultSelAction = (isVarious || isCashimex) ? '.el-table_1_column_23' : '.el-table_1_column_22';
-        const defaultSelRegistry = (isVarious || isCashimex) ? '.el-table_1_column_20' : '.el-table_1_column_19';
+        // Ahora TODOS los CRMs usan los índices 13, 23 y 20 por defecto
+        const defaultSelDate = '.el-table_1_column_13';
+        const defaultSelAction = '.el-table_1_column_23';
+        const defaultSelRegistry = '.el-table_1_column_20';
         
-        // El User ID en Cashimex es la 3 (igual que el estándar), Various usa la 2
+        // El User ID es 3 para todo el mundo (Cashimex, Global), excepto Various que usa la 2
         const defaultSelUser = isVarious ? '.el-table_1_column_2' : '.el-table_1_column_3';
 
         const getSelectorDate = () => getDynamicColumnSelector(['fecha', 'date', 'time'], defaultSelDate);
