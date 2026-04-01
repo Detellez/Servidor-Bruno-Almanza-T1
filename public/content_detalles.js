@@ -42,7 +42,7 @@
             const overlay = document.createElement('div');
             Object.assign(overlay.style, {
                 position: 'fixed', top: '0', left: '0', width: '100vw', height: '100vh',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483642',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', zIndex: '2147483647',
                 display: 'flex', justifyContent: 'center', alignItems: 'flex-start', paddingTop: '20px', backdropFilter: 'blur(5px)',
                 fontFamily: 'system-ui, -apple-system, sans-serif'
             });
@@ -185,7 +185,7 @@
             toast.id = 'toast-crm-global';
             Object.assign(toast.style, {
                 position: 'fixed', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
-                zIndex: 2147483642, backgroundColor: 'rgba(15, 23, 42, 0.95)', color: 'white',
+                zIndex: 2147483647, backgroundColor: 'rgba(15, 23, 42, 0.95)', color: 'white',
                 padding: '12px 24px', borderRadius: '12px', 
                 fontFamily: "'Segoe UI', sans-serif", fontSize: '13px', lineHeight: '1.4',
                 backdropFilter: 'blur(10px)', transition: 'all 0.3s ease',
@@ -413,7 +413,7 @@
         const currentInfo = detectCountry();
         const wrapper = document.createElement('div');
         wrapper.id = 'wrapper-crm-masivo';
-        Object.assign(wrapper.style, { position: 'fixed', left: '0', top: '0', zIndex: '2147483642', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', pointerEvents: 'none', fontFamily: "'Segoe UI', sans-serif" });
+        Object.assign(wrapper.style, { position: 'fixed', left: '0', top: '0', zIndex: '2147483646', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', pointerEvents: 'none', fontFamily: "'Segoe UI', sans-serif" });
 
         const panel = document.createElement('div');
         panel.id = 'panel-crm-masivo';
@@ -460,6 +460,40 @@
             
             // 🔥 CIRUGÍA: Mostrar el texto exacto en la alerta antes de confirmar
             btn.onclick = async () => {
+                // ⏱️ VERIFICACIÓN DE COOLDOWN GLOBAL (Bloqueo de 30s, Aviso de 3s)
+                const COOLDOWN_MS = 18000;
+                const lastExecution = parseInt(localStorage.getItem('CRM_COOLDOWN_MASIVO') || '0');
+                const tiempoTranscurrido = Date.now() - lastExecution;
+                
+                if (tiempoTranscurrido < COOLDOWN_MS) {
+                    // Limpiamos cualquier temporizador previo de ocultamiento
+                    if (window.sstCooldownHideTimer) clearTimeout(window.sstCooldownHideTimer);
+                    if (window.sstCooldownTimer) clearInterval(window.sstCooldownTimer); // Por si quedó el viejo
+                    
+                    const segs = Math.ceil((COOLDOWN_MS - tiempoTranscurrido) / 1000);
+                    
+                    // Mostrar la notificación con los segundos restantes en ese instante
+                    localStorage.setItem('crm_display_status', JSON.stringify({ 
+                        html: `<div style="font-weight:700; font-size:14px; text-align:center; padding:4px;">
+                                 ⏳ Alto respira un poco <b style="color:#fbbf24;">${segs} segundos</b> para la siguiente ejecución masiva
+                               </div>`, 
+                        color: '#f59e0b', 
+                        timestamp: Date.now()
+                    }));
+                    renderGlobalToast();
+                    
+                    // Destruir la notificación exactamente a los 3 segundos
+                    window.sstCooldownHideTimer = setTimeout(() => {
+                        localStorage.removeItem('crm_display_status');
+                        const toast = document.getElementById('toast-crm-global');
+                        if (toast) {
+                            toast.style.opacity = '0';
+                            setTimeout(() => toast.remove(), 300);
+                        }
+                    }, 3000);
+                    
+                    return; // 🛑 Bloquea el clic inmediatamente
+                }
                 // Capturamos lo que el usuario escribió justo antes de hacer clic
                 const msgText = localStorage.getItem('u_s') || 'Sin texto';
                 const msgShort = msgText.length > 100 ? msgText.substring(0, 100) + '...' : msgText;
@@ -476,7 +510,11 @@
                 );
                 
                 if (!confirmado) return;
-                
+
+                // ⏱️ APLICAR COOLDOWN DESPUÉS DE CONFIRMAR LA ACCIÓN
+                localStorage.setItem('CRM_COOLDOWN_MASIVO', Date.now().toString());
+                if (window.sstCooldownTimer) clearInterval(window.sstCooldownTimer);
+
                 // 1. Limpieza inicial para el Monitor
                 Object.keys(localStorage).forEach(k => { if (k.startsWith('crm_task_')) localStorage.removeItem(k); });
                 
