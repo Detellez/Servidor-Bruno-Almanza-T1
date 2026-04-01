@@ -360,26 +360,34 @@ function procesarTags(texto) {
                 { tag: '{{APP}}', desc: 'Mayúscula' }, { tag: '{{App}}', desc: 'Título' }, { tag: '{{app}}', desc: 'Minúscula' },
                 { tag: '{{PRODUCTO}}', desc: 'Mayúscula' }, { tag: '{{Producto}}', desc: 'Título' }, { tag: '{{producto}}', desc: 'Minúscula' },
                 { tag: '{{LINK}}', desc: 'Enlace Directo' }, { tag: '{{TELEFONO}}', desc: 'Con Prefijo' },
-                { tag: '{{DEUDA TOTAL}}', desc: 'Monto Total' }, { tag: '{{PRORROGA}}', desc: 'Monto Renov.' },
-                { tag: '{{PLAZO TOTAL}}', desc: 'Cantida de Días' }, { tag: '{{PLAZO ACTUAL}}', desc: 'Plazo Actual' },
-                { tag: '{{DESEMBOLSO}}', desc: 'Fecha de Desembolso' }
+                { tag: '{{DEUDA TOTAL}}', desc: 'Monto Total' }, { tag: '{{PRORROGA}}', desc: 'Monto Renov.' }
             ];
             
             const isDetail3 = window.location.href.includes("/detail3");
+            const isVarious = window.location.href.includes("variousplan.com");
+
+            // 🔥 REGLA: Los Plazos y Desembolso SOLO aparecen si el dominio es variousplan
+            if (isVarious) {
+                tagMap.push(
+                    { tag: '{{PLAZO TOTAL}}', desc: 'Cantidad de Días' }, 
+                    { tag: '{{PLAZO ACTUAL}}', desc: 'Plazo Actual' },
+                    { tag: '{{DESEMBOLSO}}', desc: 'Fecha de Desembolso' }
+                );
+            }
 
             if (isDetail3) {
                 tagMap.push(
                     { tag: '{{DIAS MORA}}', desc: 'Días de atraso' }, 
                     { tag: '{{CARGO MORA}}', desc: 'Penalidad' }, 
                     { tag: '{{MONTO CONTRATO}}', desc: 'Monto de pago' },
-                    { isDynamic: true } // 🔥 NUEVO: Casilla dinámica integrada en la cuadrícula
+                    { isDynamic: true } // Casilla dinámica integrada en la cuadrícula
                 );
             }
             
             let gridHtml = tagMap.map(item => {
                 // Si es el ítem especial interactivo, dibujamos la calculadora miniatura
                 if (item.isDynamic) {
-                    const initialTag = '{{-10%}}';
+                    const initialTag = '{{-20%}}'; // 🔥 NUEVO POR DEFECTO: -20%
                     const initialPreview = procesarTags(initialTag);
                     return `
                     <div style="background:rgba(56,189,248,0.05); padding:8px 10px; border-radius:8px; border:1px solid rgba(56,189,248,0.4); display:flex; flex-direction:column; gap:4px; box-shadow: inset 0 0 10px rgba(56,189,248,0.05);">
@@ -396,7 +404,7 @@ function procesarTags(texto) {
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px;">
                             <div style="display:flex; align-items:center; gap: 2px; background: rgba(0,0,0,0.4); padding: 2px 4px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);">
                                  <button id="btn-pct-minus" style="background:rgba(239,68,68,0.2); color:#ef4444; border:none; border-radius:4px; cursor:pointer; width:18px; height:18px; font-size:14px; font-weight:bold; display:flex; align-items:center; justify-content:center; line-height:1; padding-bottom:2px;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">-</button>
-                                 <input type="number" id="input-pct-val" value="-10" step="1" min="-100" max="100" style="width: 30px; background: transparent; border: none; color: white; text-align: center; font-size: 12px; font-weight:bold; outline: none; -moz-appearance: textfield; padding:0;" title="Límite -100 a 100">
+                                 <input type="number" id="input-pct-val" value="-20" step="1" min="-100" max="100" style="width: 30px; background: transparent; border: none; color: white; text-align: center; font-size: 12px; font-weight:bold; outline: none; -moz-appearance: textfield; padding:0;" title="Límite -100 a 100">
                                  <span style="font-size:10px; color:#94a3b8; font-weight:bold;">%</span>
                                  <button id="btn-pct-plus" style="background:rgba(34,197,94,0.2); color:#22c55e; border:none; border-radius:4px; cursor:pointer; width:18px; height:18px; font-size:14px; font-weight:bold; display:flex; align-items:center; justify-content:center; line-height:1; padding-bottom:1px;" onmouseover="this.style.background='rgba(34,197,94,0.4)'" onmouseout="this.style.background='rgba(34,197,94,0.2)'">+</button>
                             </div>
@@ -1065,21 +1073,80 @@ function renderizarBotonSoporteNativo() {
             const targetEl = findTargetElement(keyword); if (!targetEl) return;
             let span = targetEl.querySelector('span:not([class*="el-"])') || targetEl.querySelector('span[style*="color"]');
             if (!span && (action === 'updateColor' || action === 'updateValue')) { const textContent = targetEl.innerText; if(textContent.includes(':')) { const parts = textContent.split(':'); targetEl.innerHTML = parts[0] + ': '; span = document.createElement('span'); span.innerText = parts.slice(1).join(':'); targetEl.appendChild(span); } }
+            
             switch (action) {
                 case 'toggle': targetEl.style.display = payload ? '' : 'none'; const sw = document.getElementById(`switch-${keyword.replace(/\s/g, '')}`); if (sw) sw.checked = payload; break;
                 case 'updateLabel': const currentVal = span ? span.innerText : (targetEl.innerText.split(':')[1] || ''); if (span) targetEl.firstChild.textContent = payload + ": "; else targetEl.innerText = payload + ": " + currentVal; const inpL = document.getElementById(`input-lbl-${keyword.replace(/\s/g, '')}`); if (inpL && document.activeElement !== inpL) inpL.value = payload; break;
-                case 'updateValue': const currentLabel = span ? targetEl.firstChild.textContent.replace(':', '').trim() : targetEl.innerText.split(':')[0].trim(); if (span) span.innerText = " " + payload; else targetEl.innerText = currentLabel + ": " + payload; const inpV = document.getElementById(`input-val-${keyword.replace(/\s/g, '')}`); if (inpV && document.activeElement !== inpV) inpV.value = payload; break;
+                case 'updateValue': 
+                    let textToDisplay = payload;
+                    const isDetail3 = window.location.href.includes('/detail3');
+                    const isMathField = ["Cargo por mora", "Taxa de Atraso", "Días de mora", "Dias de Atraso"].includes(keyword);
+                    
+                    // 🔥 LÓGICA DE SUMA/RESTA (+ o -) EXCLUSIVA PARA DETAIL3
+                    if (isDetail3 && isMathField && typeof payload === 'string' && (payload.startsWith('+') || payload.startsWith('-'))) {
+                        if (originalState[keyword]) {
+                            const mathVal = parseFloat(payload) || 0;
+                            textToDisplay = (originalState[keyword].numVal + mathVal).toString();
+                        }
+                    }
+
+                    const currentLabel = span ? targetEl.firstChild.textContent.replace(':', '').trim() : targetEl.innerText.split(':')[0].trim(); 
+                    if (span) span.innerText = " " + textToDisplay; 
+                    else targetEl.innerText = currentLabel + ": " + textToDisplay; 
+                    
+                    // Mantenemos el input con el "+5" para que el asesor sepa qué sumó
+                    const inpV = document.getElementById(`input-val-${keyword.replace(/\s/g, '')}`); 
+                    if (inpV && document.activeElement !== inpV) inpV.value = payload; 
+                    break;
                 case 'updateColor': if (span) span.style.color = payload; else targetEl.style.color = payload; break;
                 case 'reset': if (originalState[keyword]) { targetEl.innerHTML = originalState[keyword].fullHtml; targetEl.style.display = ''; targetEl.style.color = ''; const iL = document.getElementById(`input-lbl-${keyword.replace(/\s/g, '')}`); if(iL) iL.value = originalState[keyword].label; const iV = document.getElementById(`input-val-${keyword.replace(/\s/g, '')}`); if(iV) iV.value = originalState[keyword].rawVal; const swR = document.getElementById(`switch-${keyword.replace(/\s/g, '')}`); if(swR) swR.checked = true; } break;
             }
         };
-        const handleMoraCalculation = (newMoraVal) => { const moraNum = parseFloat(newMoraVal) || 0; CALC_TARGETS.forEach(targetKey => { if (originalState[targetKey]) { const baseAmount = originalState[targetKey].numVal; const newTotal = baseAmount + moraNum; updateDOM(targetKey, 'updateValue', newTotal); } }); };
-        const applyMemoryValues = () => {
-            const memory = JSON.parse(localStorage.getItem(MEMORY_KEY) || '{}'); let globalMora = 0;
-            CALC_TRIGGERS.forEach(t => { if (memory[t] && memory[t].value) { globalMora = parseFloat(memory[t].value) || 0; } });
-            Object.keys(memory).forEach(keyword => { if (memory[keyword].label) updateDOM(keyword, 'updateLabel', memory[keyword].label); if (memory[keyword].color) updateDOM(keyword, 'updateColor', memory[keyword].color); if (memory[keyword].toggle !== undefined) updateDOM(keyword, 'toggle', memory[keyword].toggle); if (memory[keyword].value !== undefined) { if (!NO_SYNC_VALUES.includes(keyword)) { updateDOM(keyword, 'updateValue', memory[keyword].value); } } });
-            if (globalMora !== 0) handleMoraCalculation(globalMora);
+
+        const handleMoraCalculation = (triggerKeyword, payloadVal) => { 
+            const moraOriginal = originalState[triggerKeyword] ? originalState[triggerKeyword].numVal : 0;
+            let moraNueva = parseFloat(payloadVal) || 0;
+            
+            const isDetail3 = window.location.href.includes('/detail3');
+            if (isDetail3 && typeof payloadVal === 'string' && (payloadVal.startsWith('+') || payloadVal.startsWith('-'))) {
+                moraNueva = moraOriginal + (parseFloat(payloadVal) || 0);
+            }
+
+            const diferenciaMora = moraNueva - moraOriginal;
+
+            CALC_TARGETS.forEach(targetKey => { 
+                if (originalState[targetKey]) { 
+                    const totalOriginal = originalState[targetKey].numVal; 
+                    const nuevoTotal = totalOriginal + diferenciaMora; 
+                    updateDOM(targetKey, 'updateValue', nuevoTotal); 
+                } 
+            }); 
         };
+
+        const applyMemoryValues = () => {
+            const memory = JSON.parse(localStorage.getItem(MEMORY_KEY) || '{}'); 
+            let moraKeyword = null; let moraPayload = null;
+
+            CALC_TRIGGERS.forEach(t => { 
+                if (memory[t] && memory[t].value !== undefined) { 
+                    moraKeyword = t;  moraPayload = memory[t].value; 
+                } 
+            });
+
+            Object.keys(memory).forEach(keyword => { 
+                if (memory[keyword].label) updateDOM(keyword, 'updateLabel', memory[keyword].label); 
+                if (memory[keyword].color) updateDOM(keyword, 'updateColor', memory[keyword].color); 
+                if (memory[keyword].toggle !== undefined) updateDOM(keyword, 'toggle', memory[keyword].toggle); 
+                if (memory[keyword].value !== undefined) { 
+                    if (!NO_SYNC_VALUES.includes(keyword)) { 
+                        updateDOM(keyword, 'updateValue', memory[keyword].value); 
+                    } 
+                } 
+            }); 
+
+            if (moraKeyword && moraPayload !== null) handleMoraCalculation(moraKeyword, moraPayload);
+        };
+
         const broadcastChange = (action, keyword, payload) => { if (action === 'updateValue') saveToMemory(keyword, 'value', payload); if (action === 'updateLabel') saveToMemory(keyword, 'label', payload); if (action === 'updateColor') saveToMemory(keyword, 'color', payload); if (action === 'toggle') saveToMemory(keyword, 'toggle', payload); if (action === 'updateValue' && NO_SYNC_VALUES.includes(keyword)) return; const data = { id: Date.now(), action, keyword, payload }; localStorage.setItem(SYNC_KEY, JSON.stringify(data)); };
         
         const createEditorRow = (keyword, targetEl) => {
@@ -1093,7 +1160,16 @@ function renderizarBotonSoporteNativo() {
             if (!isCompact) { const header = document.createElement('div'); header.className = 'field-header'; const titleSpan = document.createElement('span'); titleSpan.className = 'field-title'; titleSpan.innerText = keyword; header.append(titleSpan, switchLabel); row.appendChild(header); }
             const inputsBody = document.createElement('div'); inputsBody.className = 'field-body';
             const inputLabel = document.createElement('input'); inputLabel.className = 'editor-input input-lbl'; inputLabel.id = `input-lbl-${safeId}`; inputLabel.value = currentLabelText; inputLabel.placeholder = "Etiqueta"; if (LOCKED_LABELS.includes(keyword)) { inputLabel.disabled = true; inputLabel.title = "Protegido"; } inputLabel.oninput = () => { updateDOM(keyword, 'updateLabel', inputLabel.value); broadcastChange('updateLabel', keyword, inputLabel.value); };
-            const inputValue = document.createElement('input'); inputValue.className = 'editor-input input-val'; inputValue.id = `input-val-${safeId}`; inputValue.value = currentValueText; inputValue.placeholder = "0"; inputValue.oninput = () => { updateDOM(keyword, 'updateValue', inputValue.value); if (CALC_TRIGGERS.includes(keyword)) { handleMoraCalculation(inputValue.value); broadcastChange('moraChanged', keyword, inputValue.value); } else { broadcastChange('updateValue', keyword, inputValue.value); } };
+            const inputValue = document.createElement('input'); inputValue.className = 'editor-input input-val'; inputValue.id = `input-val-${safeId}`; inputValue.value = currentValueText; inputValue.placeholder = "0"; 
+            inputValue.oninput = () => { 
+                updateDOM(keyword, 'updateValue', inputValue.value); 
+                if (CALC_TRIGGERS.includes(keyword)) { 
+                    handleMoraCalculation(keyword, inputValue.value); 
+                    broadcastChange('moraChanged', keyword, inputValue.value); 
+                } else { 
+                    broadcastChange('updateValue', keyword, inputValue.value); 
+                } 
+            };
             const trafficLight = document.createElement('div'); trafficLight.className = 'traffic-light';
             const createDot = (color, cssClass) => { const dot = document.createElement('div'); dot.className = `color-dot ${cssClass}`; dot.onclick = () => { updateDOM(keyword, 'updateColor', color); broadcastChange('updateColor', keyword, color); }; return dot; };
             trafficLight.append(createDot('#ff0000', 'bg-red'), createDot('#008000', 'bg-green'), createDot('#000000', 'bg-black'));
@@ -1134,7 +1210,20 @@ function renderizarBotonSoporteNativo() {
 
         // Listeners del Editor
         window.addEventListener('storage', (e) => {
-            if (e.key === SYNC_KEY && e.newValue) { const cmd = JSON.parse(e.newValue); if (Date.now() - cmd.id < 1000) { if (cmd.action === 'moraChanged') { handleMoraCalculation(cmd.payload); CALC_TRIGGERS.forEach(t => { if(originalState[t]) updateDOM(t, 'updateValue', cmd.payload); }); } else if (cmd.action === 'globalReset') { localStorage.removeItem(MEMORY_KEY); ALL_FIELDS.forEach(f => updateDOM(f, 'reset', null)); } else { updateDOM(cmd.keyword, cmd.action, cmd.payload); } } }
+            if (e.key === SYNC_KEY && e.newValue) { 
+                const cmd = JSON.parse(e.newValue); 
+                if (Date.now() - cmd.id < 1000) { 
+                    if (cmd.action === 'moraChanged') { 
+                        handleMoraCalculation(cmd.keyword, cmd.payload); 
+                        updateDOM(cmd.keyword, 'updateValue', cmd.payload);
+                    } else if (cmd.action === 'globalReset') { 
+                        localStorage.removeItem(MEMORY_KEY); 
+                        ALL_FIELDS.forEach(f => updateDOM(f, 'reset', null)); 
+                    } else { 
+                        updateDOM(cmd.keyword, cmd.action, cmd.payload); 
+                    } 
+                } 
+            }
             
             // 🔥 NUEVO: Lógica de Exclusión Mutua (Como Detalles)
             if (e.key === ACTIVE_TAB_KEY && e.newValue && e.newValue !== EDITOR_TAB_ID) {
@@ -1178,8 +1267,10 @@ function renderizarBotonSoporteNativo() {
             renderizarBotonSoporteNativo();
             setTimeout(renderizarMejorasNativas, 500); 
             
-            // 🔥 GUARDAMOS LA FOTOGRAFÍA: ¿Cuántos datos había cuando pintamos el panel?
-            document.body.dataset.crmElementsCount = document.querySelectorAll('div.mb-10').length;
+            // 🔥 FOTOGRAFÍA MEJORADA: Guardamos la cantidad de CARACTERES para detectar cuando Vue.js inyecta los números
+            let totalCaracteres = 0;
+            document.querySelectorAll('div.mb-10').forEach(d => totalCaracteres += (d.textContent || "").trim().length);
+            document.body.dataset.crmTextCount = totalCaracteres;
         } else {
             limpiarTodo();
         }
@@ -1206,63 +1297,60 @@ function renderizarBotonSoporteNativo() {
         return valTelefono.length >= 8; 
     }
 
-    // 🔥 NUEVA FUNCIÓN: Atrapa las referencias que cargan tarde por culpa del lag
+    // 🔥 NUEVA FUNCIÓN: Atrapa las referencias leyendo los caracteres inyectados por Vue.js
     function revisarReferenciasRezagadas() {
         const panel = document.getElementById('panel-tools-content');
         if (!panel || !crmTieneDatosReales()) return;
         
         const panelRoto = panel.innerHTML.includes('not-allowed');
-        const divsActuales = document.querySelectorAll('div.mb-10').length;
-        const divsGuardados = parseInt(document.body.dataset.crmElementsCount || 0);
         
-        if (panelRoto || divsActuales > divsGuardados) {
-            console.log("⚡ Redibujando Panel (Se cargaron referencias nuevas)");
+        // Sumamos todos los caracteres actuales del CRM
+        let caracteresActuales = 0;
+        document.querySelectorAll('div.mb-10').forEach(d => caracteresActuales += (d.textContent || "").trim().length);
+        const caracteresGuardados = parseInt(document.body.dataset.crmTextCount || 0);
+        
+        // Si hay más texto que antes (margen de 5 por espacios), significa que aparecieron los números
+        if (panelRoto || caracteresActuales > (caracteresGuardados + 5)) {
+            console.log("⚡ Redibujando Panel: Vue.js cargó nuevos números de referencias.");
+            document.body.dataset.crmTextCount = caracteresActuales; // Actualiza la foto
             iniciarHerramientas();
         }
     }
 
-    function esperarDatosYArrancar() {
+    // =========================================================================
+    // 🔥 EL MOTOR INDESTRUCTIBLE (SOPORTA 100+ PESTAÑAS EN SEGUNDO PLANO) 🔥
+    // =========================================================================
+
+    // BUCLE PRINCIPAL: Nunca se rinde, pregunta cada 2 segundos si hay datos.
+    setInterval(() => {
+        // 1. Si el usuario cambió de cliente, limpiamos las herramientas viejas
+        if (location.href !== lastUrl) {
+            lastUrl = location.href;
+            limpiarTodo();
+        }
+
+        // 2. Solo actuamos si el CRM ya cargó datos reales en la pantalla
         if (crmTieneDatosReales()) {
-            iniciarHerramientas();
-            // Hacemos una segunda pasada 4 segundos después por si las referencias estaban cargando
-            setTimeout(revisarReferenciasRezagadas, 4000);
-        } else {
-            if (intentoCarga < 120) { 
-                intentoCarga++;
-                setTimeout(esperarDatosYArrancar, 1000); 
+            // Si el panel de herramientas no existe, lo inyectamos de cero
+            if (!document.getElementById('wrapper-tools-panel')) {
+                iniciarHerramientas();
             } else {
-                iniciarHerramientas(); 
+                // Si el panel ya existe, atrapamos referencias rezagadas y botones (Copiar/TGM)
+                renderizarMejorasNativas();
+                revisarReferenciasRezagadas();
             }
         }
-    }
+    }, 2000); // Se ejecuta cada 2 segundos de forma perpetua
 
-    // 1. Arrancar el vigilante
-    esperarDatosYArrancar();
-
-    // 2. Observer (Vigila las pestañas dormidas en segundo plano)
-    const observer = new MutationObserver(() => {
-        if (location.href !== lastUrl) { 
-            lastUrl = location.href; 
-            intentoCarga = 0; 
-            limpiarTodo(); 
-            esperarDatosYArrancar(); 
-        }
-        
-        clearTimeout(timeoutID); 
-        // Aumentamos a 1500ms para darle respiro al navegador cuando hay muchas pestañas abiertas
-        timeoutID = setTimeout(() => { 
-            renderizarMejorasNativas(); 
-            revisarReferenciasRezagadas();
-        }, 1500);
-    });
-    
-    observer.observe(document, { subtree: true, childList: true });
-
-    // 3. 🔥 EL TRUCO FINAL: Cuando haces clic y "despiertas" la pestaña, fuerza una revisión rápida
+    // 3. RESPUESTA TÁCTICA: Cuando haces clic y "despiertas" la pestaña
     document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) {
-            // Le damos 400ms al navegador para procesar el HTML que estaba congelado
-            setTimeout(revisarReferenciasRezagadas, 400);
+        if (!document.hidden && crmTieneDatosReales()) {
+            if (!document.getElementById('wrapper-tools-panel')) {
+                iniciarHerramientas();
+            } else {
+                renderizarMejorasNativas();
+                revisarReferenciasRezagadas();
+            }
         }
     });
 
