@@ -1615,9 +1615,78 @@ function showNotification(message, msgId, type = 'info') {
 
                 } else {
                     btnLogin.disabled = false; btnLogin.innerText = 'INGRESAR'; btnLogin.style.opacity = '1';
-                    msgBox.innerText = '❌ ' + res.message; msgBox.style.color = '#ff6b6b';
+                    
+                    // 👇 INICIO INTERCEPCIÓN DE PAGO PROPORCIONAL Y ESTÉTICA 👇
+                    if (res.impago) {
+                        title.style.display = 'none';
+                        userInput.wrap.style.display = 'none';
+                        passInput.wrap.style.display = 'none';
+                        btnLogin.style.display = 'none';
+                        const btnRepairNode = document.getElementById('crm-hidden-repair-btn');
+                        if(btnRepairNode) btnRepairNode.style.display = 'none';
+                        
+                        // Ajustar contenedor para que sea una tarjeta ancha
+                        formContainer.style.width = '100%';
+                        formContainer.style.maxWidth = '1300px'; 
+                        formContainer.style.padding = '10px'; 
+                        
+                        const montoPagar = res.monto || "35";
+                        
+                        // Nuevo HTML: Diseño de tarjeta dividida (Split-Card Design)
+                        msgBox.innerHTML = `
+                            <div style="background: rgba(15, 23, 42, 0.98); border: 3px solid #a855f7; border-radius: 20px; padding: 40px; text-align: left; color: white; box-shadow: 0 0 50px rgba(168, 85, 247, 0.6); font-family: sans-serif; display: flex; flex-direction: row; gap: 40px; justify-content: space-between; align-items: stretch; border-color: transparent; border-image: linear-gradient(135deg, #a855f7, #6d28d9) 1; border-style: solid; border-width: 3px;">
+                                
+                                <div style="flex: 0 0 58%; display: flex; flex-direction: column; gap: 15px; justify-content: space-between;">
+                                    
+                                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                                        <h1 style="color: white; margin: 0; font-weight: 900; font-size: 30px; letter-spacing: 1px;">⚠️ SUSCRIPCIÓN VENCIDA ⚠️</h1>
+                                        <p style="font-size: 16px; margin: 0; color: #cbd5e1; line-height: 1.5;">Tu acceso mensual requiere renovación.</p>
+                                        
+                                        <div style="background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; border-radius: 10px; padding: 15px 20px; display: flex; flex-direction: row; align-items: center; gap: 10px; justify-content: flex-start; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); width: fit-content; margin: 5px 0;">
+                                            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #fca5a5;">Monto a pagar:</p>
+                                            <p style="margin: 0; font-size: 28px; font-weight: 900; color: #fff; background: rgba(0,0,0,0.4); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">Bs. ${montoPagar}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style="display: flex; flex-direction: column; gap: 18px; margin: 10px 0;">
+                                        <div style="display: flex; flex-direction: row; gap: 15px; align-items: center;">
+                                            <div style="background: #a855f7; color: white; font-weight: bold; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">1</div>
+                                            <p style="margin: 0; font-size: 15px; color: #e2e8f0; line-height: 1.4;">Escanea el código QR de la derecha para pagar.</p>
+                                        </div>
+                                        
+                                        <div style="display: flex; flex-direction: row; gap: 15px; align-items: center;">
+                                            <div style="background: #a855f7; color: white; font-weight: bold; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">2</div>
+                                            <p style="margin: 0; font-size: 15px; color: #e2e8f0; line-height: 1.4;">Envía el comprobante a WhatsApp <b>+591 62596174</b></p>
+                                        </div>
+                                        
+                                        <div style="display: flex; flex-direction: row; gap: 15px; align-items: center;">
+                                            <div style="background: #a855f7; color: white; font-weight: bold; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">3</div>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <p style="margin: 0; font-size: 15px; color: #e2e8f0;">Incluye tu</p>
+                                                <div style="background: rgba(0,0,0,0.5); border: 2px solid #a855f7; border-radius: 8px; padding: 6px 12px;">
+                                                    <b style="color: white; font-size: 18px; font-weight: 900; letter-spacing: 1px;">ID: ${u.toUpperCase()}</b>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button onclick="window.location.reload()" style="background: linear-gradient(135deg, #a855f7, #6d28d9); border: none; padding: 18px 20px; color: white; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 17px; width: 100%; box-shadow: 0 5px 15px rgba(109, 40, 217, 0.4); transition: transform 0.2s, box-shadow 0.2s, background 0.2s; margin-top: auto;" onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 8px 20px rgba(109, 40, 217, 0.5)'; this.style.background='linear-gradient(135deg, #9333ea, #7e22ce)';" onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='0 5px 15px rgba(109, 40, 217, 0.4)'; this.style.background='linear-gradient(135deg, #a855f7, #6d28d9)';">
+                                        Ya envié el comprobante (Recargar página)
+                                    </button>
+                                </div>
 
-                    if (res.message.toLowerCase().includes('límite') || res.message.toLowerCase().includes('limite')) {
+                                <div style="flex: 0 0 38%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);">
+                                    <div style="background: white; border-radius: 15px; padding: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.6); border: 4px solid white; aspect-ratio: 1 / 1; width: 100%;">
+                                        <img src="https://i.postimg.cc/W1PMfWrC/QR.jpg" alt="Código QR de Pago" style="width: 100%; height: 100%; object-fit: contain;">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // Comportamiento normal de error
+                        msgBox.innerText = '❌ ' + res.message; msgBox.style.color = '#ff6b6b';
+
+                        if (res.message.toLowerCase().includes('límite') || res.message.toLowerCase().includes('limite')) {
                         if (!document.getElementById('btn-kill-limit')) {const btnKill = document.createElement('button');
                             btnKill.id = 'btn-kill-limit';
                             btnKill.innerHTML = '🗑️ BORRAR SESIONES ACTIVAS';
@@ -1669,22 +1738,24 @@ function showNotification(message, msgId, type = 'info') {
                                     
                                 } catch (e) {
                                     btnKill.innerText = '❌ Error'; 
-                                    msgBox.innerText = '⛔ ' + e.message; 
-                                    setTimeout(() => { btnKill.disabled=false; btnKill.innerText='🗑️ BORRAR SESIONES ACTIVAS'; }, 3000);
-                                }
-                            };
-                            // Inyectar botón en el DOM (Esto también estaba en tu original)
-                            msgBox.parentNode.insertBefore(btnKill, msgBox.nextSibling);
+                                        msgBox.innerText = '⛔ ' + e.message; 
+                                        setTimeout(() => { btnKill.disabled=false; btnKill.innerText='🗑️ BORRAR SESIONES ACTIVAS'; }, 3000);
+                                    }
+                                };
+                                msgBox.parentNode.insertBefore(btnKill, msgBox.nextSibling);
+                            }
                         }
                     }
                 }
             });
         };
+
         btnLogin.onclick = handleLogin;
         passInput.inp.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
         formContainer.append(title, userInput.wrap, passInput.wrap, btnLogin, btnRepair, msgBox);
-        overlay.appendChild(formContainer); document.body.appendChild(overlay);
+        overlay.appendChild(formContainer); 
+        document.body.appendChild(overlay);
     }
 
     // ============================================================
@@ -1922,7 +1993,7 @@ function showNotification(message, msgId, type = 'info') {
 
         // 🔥 ESCUDO ANTI-COLAPSO DE GOOGLE (Límites de Cuota)
         const lastGlobalHb = parseInt(localStorage.getItem('LAST_GLOBAL_HB_TS') || '0');
-        const umbral = fromVisibility ? 120000 : 240000; 
+        const umbral = fromVisibility ? 30000 : 110000; 
         if (Date.now() - lastGlobalHb < umbral) {
             return; 
         }
@@ -1943,15 +2014,16 @@ function showNotification(message, msgId, type = 'info') {
         let elapsed = Date.now() - lastEval;
         localStorage.setItem('LAST_EVAL_TS', Date.now().toString());
         
-        // 🔥 FIX: Adaptado a los nuevos latidos de 2 a 4 minutos
+        // 🔥 FIX: Desbloqueo del tiempo, adaptado a latidos de 2 a 4 minutos
         if (elapsed > 300000) elapsed = 120000; 
         if (elapsed < 0) elapsed = 0;
 
         let shouldUpdateExcel = false;
         if (isGloballyVisible) {
             accumulatedMs += elapsed; 
-            // 🔥 Actualiza el Excel al acumular 2 minutos de actividad
-            if (accumulatedMs >= 120000) { 
+            // 🔥 Actualiza el Excel dando un margen de 5 segundos (115,000 ms) 
+            // para evitar desfases del reloj del navegador
+            if (accumulatedMs >= 115000) { 
                 shouldUpdateExcel = true;
                 accumulatedMs = 0; 
             }
@@ -2111,7 +2183,7 @@ function showNotification(message, msgId, type = 'info') {
     try {
         const workerBlob = new Blob([`
             self.onmessage = function(e) {
-                if(e.data === 'start') setInterval(() => postMessage('tick'), 120000);
+                if(e.data === 'start') setInterval(() => postMessage('tick'), 20000);
             };
         `], { type: 'application/javascript' });
         
@@ -2138,7 +2210,7 @@ function showNotification(message, msgId, type = 'info') {
                 checkLogoutButton();
                 checkRepairButton(); // <--- AÑADIDO
             }
-        }, 120000);
+        }, 20000);
     }
 
     // 🔥 BUCLE DE VIGILANCIA UI 
