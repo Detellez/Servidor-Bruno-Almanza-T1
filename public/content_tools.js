@@ -705,7 +705,18 @@ function procesarTags(texto) {
                 }
                 return btn;
             };
-            row.append(createSubBtn('Copiar', '#3b82f6', () => { navigator.clipboard.writeText(number).then(() => mostrarAvisoTemporal(`Copiado: ${number} 📋`, 1500)); }), createSubBtn('TGM', '#22c55e', () => { window.location.href = `tg://resolve?phone=${number}`; }));
+            
+            // 🔥 EXCEPCIÓN ARGENTINA: SOLO PARA EL BOTÓN COPIAR 🔥
+            let numCopiar = number;
+            if (number && countryInfo.name === "Argentina") {
+                // Reemplazamos el '54' inicial por '549'
+                numCopiar = "549" + number.substring(2);
+            }
+
+            row.append(
+                createSubBtn('Copiar', '#3b82f6', () => { navigator.clipboard.writeText(numCopiar).then(() => mostrarAvisoTemporal(`Copiado: ${numCopiar} 📋`, 1500)); }), 
+                createSubBtn('TGM', '#22c55e', () => { window.location.href = `tg://resolve?phone=${number}`; }) // TGM y lo demás usan el número original
+            );
             panel.appendChild(row);
         };
 
@@ -862,7 +873,13 @@ function procesarTags(texto) {
                 const textoAnterior = containerAnterior.textContent || ""; // 🔥 MAGIA
                 const soloNumeros = textoAnterior.split(":")[1]?.trim().replace(/[^0-9]/g, '');
                 if (soloNumeros && soloNumeros.length >= countryInfo.digits) {
-                    const numeroFinal = prefixClean + soloNumeros.slice(-countryInfo.digits);
+                    
+                    // 🔥 EXCEPCIÓN ARGENTINA: Usar 549 solo para el botón de Copiar llamadas 🔥
+                    let prefijoCopiar = prefixClean;
+                    if (countryInfo.name === "Argentina") prefijoCopiar = "549";
+                    
+                    const numeroFinal = prefijoCopiar + soloNumeros.slice(-countryInfo.digits);
+                    
                     botonOriginal.dataset.hijacked = "true"; span.innerText = "Copiar";
                     const nuevoBoton = botonOriginal.cloneNode(true);
                     nuevoBoton.onclick = (e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(numeroFinal).then(() => mostrarAvisoTemporal(`Copiado: ${numeroFinal} 📋`, 1500)); };
