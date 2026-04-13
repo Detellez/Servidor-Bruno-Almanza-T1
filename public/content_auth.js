@@ -1,7 +1,111 @@
 (function() {
     'use strict';
-
 // =========================================================================
+    // 🕸️ MÓDULO 0: OBSERVADOR DE SESIONES V6.2 (MODO SIGILO / INVISIBLE)
+    // =========================================================================
+    
+    // 1. Extractor del Token Crudo (La huella dactilar)
+    function obtenerFirmaToken() {
+        try {
+            const match = document.cookie.match(/(?:^|; )Admin-Token=([^;]*)/);
+            if (match && match[1]) {
+                return match[1].trim(); 
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    // 2. Extractor del Nombre de Usuario (Para el historial visual)
+    function decodificarNombreUsuario(tokenCrudo) {
+        try {
+            if (!tokenCrudo) return null;
+            let tokenLimpio = decodeURIComponent(tokenCrudo).replace(/^Bear(?:er)?\s+/i, '').trim();
+            const partesJwt = tokenLimpio.split('.');
+            if (partesJwt.length >= 2) {
+                const base64Url = partesJwt[1].replace(/-/g, '+').replace(/_/g, '/');
+                const jsonTxt = decodeURIComponent(window.atob(base64Url).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+                const datos = JSON.parse(jsonTxt);
+                return datos.loginName || datos.username || null;
+            }
+        } catch(e) {}
+        return null;
+    }
+
+    // 🔥 LA MEMORIA AHORA RECUERDA EL TOKEN, NO SOLO EL NOMBRE
+    let memoriaTokenActivo = obtenerFirmaToken();
+    let cuentaVisualActiva = decodificarNombreUsuario(memoriaTokenActivo) || "Desconocida";
+
+    // 3. Guardián del LocalStorage (Silencioso)
+    function registrarEventoCRM(evento, cuenta) {
+        if (!cuenta || cuenta === 'Desconocido' || cuenta === 'undefined' || String(cuenta) === 'null') return;
+        
+        let historial = [];
+        try { historial = JSON.parse(localStorage.getItem('SST_CRM_HISTORY') || '[]'); } catch(e){}
+        
+        // Anti-Duplicados (3 segundos)
+        const isDup = historial.some(h => h.cuenta === cuenta && h.evento === evento && (Date.now() - h.ts < 3000));
+        if (isDup) return;
+
+        historial.push({
+            ts: Date.now(),
+            fecha: new Date().toLocaleString('es-ES'),
+            evento: evento,
+            cuenta: cuenta,
+            dominio: window.location.hostname,
+            deviceId: localStorage.getItem('deviceUniqueId') || "Desconocido"
+        });
+        
+        localStorage.setItem('SST_CRM_HISTORY', JSON.stringify(historial));
+        localStorage.setItem('SST_NEEDS_SYNC', 'true');
+    }
+
+    // 4. El Motor del Observador (Vigila el Token, no la recarga)
+    setInterval(() => {
+        const tokenActual = obtenerFirmaToken();
+
+        // A. LOGIN NUEVO: No había token y apareció uno, O el token cambió por uno diferente
+        if (tokenActual !== null && tokenActual !== memoriaTokenActivo) {
+            const nuevoUsuario = decodificarNombreUsuario(tokenActual);
+            
+            // Si había una sesión vieja, la cerramos formalmente antes de abrir la nueva
+            if (memoriaTokenActivo !== null && cuentaVisualActiva !== "Desconocida") {
+                registrarEventoCRM("LOGOUT", cuentaVisualActiva);
+            }
+            
+            registrarEventoCRM("LOGIN_EXITOSO", nuevoUsuario);
+            memoriaTokenActivo = tokenActual;
+            cuentaVisualActiva = nuevoUsuario;
+        }
+        // B. LOGOUT: Había un token guardado en memoria y de repente desapareció de las cookies
+        else if (tokenActual === null && memoriaTokenActivo !== null) {
+            registrarEventoCRM("LOGOUT", cuentaVisualActiva);
+            memoriaTokenActivo = null;
+            cuentaVisualActiva = "Desconocida";
+        }
+    }, 800);
+
+    // 5. Cazador de Fallos (Vigila cuando hacen clic en "Ingresar")
+    document.addEventListener('click', (e) => {
+        const textoBoton = (e.target.innerText || e.target.value || '').toLowerCase();
+        if (textoBoton.includes('login') || textoBoton.includes('ingresar') || e.target.type === 'submit') {
+             let userIntento = "Desconocido";
+             document.querySelectorAll('input[type="text"]').forEach(inp => {
+                 if(inp.placeholder.toLowerCase().includes('user') || inp.name.toLowerCase().includes('user') || inp.className.toLowerCase().includes('user')) {
+                     userIntento = inp.value.trim();
+                 }
+             });
+
+             if (userIntento && userIntento !== "Desconocido" && userIntento !== "") {
+                  setTimeout(() => {
+                      if (!obtenerFirmaToken()) {
+                           registrarEventoCRM("LOGIN_FALLIDO", userIntento);
+                      }
+                  }, 2500);
+             }
+        }
+    }, true);
+    // =========================================================================
+    // =========================================================================
     // 🛡️ MÓDULO 1: MENÚ OSCURO INTELIGENTE V36 (NOMBRES, BORDES Y COOLDOWN) 🛡️
     // =========================================================================
     
@@ -630,7 +734,6 @@
     // ==========================================
     const CEREBRO_URL = 'https://script.google.com/macros/s/AKfycbxsyFiCV1bhHvfPFXCANqN9Ce4ap-DtABPgqdZ_5H74NMwa_1tk1Y8FNzvfUvUkjBiLbQ/exec';
     const FIREBASE_URL = "https://notificacionalamza-default-rtdb.firebaseio.com/alerta_activa.json";
-    
     const API_URL = CEREBRO_URL;
     
     // Variable para detener intervalos
@@ -1687,57 +1790,57 @@ function showNotification(message, msgId, type = 'info') {
                         msgBox.innerText = '❌ ' + res.message; msgBox.style.color = '#ff6b6b';
 
                         if (res.message.toLowerCase().includes('límite') || res.message.toLowerCase().includes('limite')) {
-                        if (!document.getElementById('btn-kill-limit')) {const btnKill = document.createElement('button');
-                            btnKill.id = 'btn-kill-limit';
-                            btnKill.innerHTML = '🗑️ BORRAR SESIONES ACTIVAS';
-                            Object.assign(btnKill.style, {
-                                marginTop: '15px', width: '100%', padding: '10px',
-                                backgroundColor: 'rgba(220, 38, 38, 0.15)', border: '1px solid #ef4444',
-                                color: '#fca5a5', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold',
-                                cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '0.5px'
-                            });
-                            btnKill.onmouseenter = () => { btnKill.style.backgroundColor = '#ef4444'; btnKill.style.color = 'white'; };
-                            btnKill.onmouseleave = () => { btnKill.style.backgroundColor = 'rgba(220, 38, 38, 0.15)'; btnKill.style.color = '#fca5a5'; };
-                            
-                            // 🔥 AQUÍ EMPIEZA LA LÓGICA CORREGIDA (CON TOKEN)
-                            btnKill.onclick = async () => {
-                                const kUser = userInput.inp.value.trim();
-                                const kPass = passInput.inp.value.trim();
-                                if (!kUser || !kPass) { msgBox.innerText = '⚠️ Se requiere Usuario y Contraseña'; return; }
+                            if (!document.getElementById('btn-kill-limit')) {const btnKill = document.createElement('button');
+                                btnKill.id = 'btn-kill-limit';
+                                btnKill.innerHTML = '🗑️ BORRAR SESIONES ACTIVAS';
+                                Object.assign(btnKill.style, {
+                                    marginTop: '15px', width: '100%', padding: '10px',
+                                    backgroundColor: 'rgba(220, 38, 38, 0.15)', border: '1px solid #ef4444',
+                                    color: '#fca5a5', borderRadius: '50px', fontSize: '13px', fontWeight: 'bold',
+                                    cursor: 'pointer', transition: 'all 0.3s', letterSpacing: '0.5px'
+                                });
+                                btnKill.onmouseenter = () => { btnKill.style.backgroundColor = '#ef4444'; btnKill.style.color = 'white'; };
+                                btnKill.onmouseleave = () => { btnKill.style.backgroundColor = 'rgba(220, 38, 38, 0.15)'; btnKill.style.color = '#fca5a5'; };
+                                
+                                // 🔥 AQUÍ EMPIEZA LA LÓGICA CORREGIDA (CON TOKEN)
+                                btnKill.onclick = async () => {
+                                    const kUser = userInput.inp.value.trim();
+                                    const kPass = passInput.inp.value.trim();
+                                    if (!kUser || !kPass) { msgBox.innerText = '⚠️ Se requiere Usuario y Contraseña'; return; }
 
-                                btnKill.disabled = true; btnKill.innerText = '⏳ Verificando...';
+                                    btnKill.disabled = true; btnKill.innerText = '⏳ Verificando...';
 
-                                try {
-                                    // 1. VERIFICAR CREDENCIALES
-                                    const urlCheck = new URL(API_URL);
-                                    urlCheck.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
-                                    urlCheck.searchParams.append('action', 'login');
-                                    urlCheck.searchParams.append('usuario', kUser);
-                                    urlCheck.searchParams.append('contrasena', kPass);
-                                    urlCheck.searchParams.append('sessionId', 'check_kill_' + Date.now());
+                                    try {
+                                        // 1. VERIFICAR CREDENCIALES
+                                        const urlCheck = new URL(API_URL);
+                                        urlCheck.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
+                                        urlCheck.searchParams.append('action', 'login');
+                                        urlCheck.searchParams.append('usuario', kUser);
+                                        urlCheck.searchParams.append('contrasena', kPass);
+                                        urlCheck.searchParams.append('sessionId', 'check_kill_' + Date.now());
 
-                                    const checkRes = await new Promise(resolve => {
-                                        safeSendMessage({ action: 'proxy_fetch', url: urlCheck.toString(), options: { method: 'GET' } }, resolve);
-                                    });
+                                        const checkRes = await new Promise(resolve => {
+                                            safeSendMessage({ action: 'proxy_fetch', url: urlCheck.toString(), options: { method: 'GET' } }, resolve);
+                                        });
 
-                                    if (!checkRes || !checkRes.success || !checkRes.data) throw new Error('Error de conexión');
-                                    if (checkRes.data.success === false && checkRes.data.message.includes('Credenciales')) throw new Error('Contraseña Mal');
+                                        if (!checkRes || !checkRes.success || !checkRes.data) throw new Error('Error de conexión');
+                                        if (checkRes.data.success === false && checkRes.data.message.includes('Credenciales')) throw new Error('Contraseña Mal');
 
-                                    // 2. EJECUTAR EL BORRADO REAL
-                                    btnKill.innerText = '🔥 Borrando...';
-                                    const urlKK = new URL(API_URL);
-                                    urlKK.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
-                                    urlKK.searchParams.append('action','kill_all');
-                                    urlKK.searchParams.append('usuario', kUser);
-                                    
-                                    await new Promise(r => safeSendMessage({ action: 'proxy_fetch', url: urlKK.toString(), options: { method: 'GET' } }, r));
-                                    
-                                    msgBox.innerText = '✅ Sesiones borradas. Intenta ingresar.'; 
-                                    msgBox.style.color = '#34d399'; 
-                                    btnKill.remove();
-                                    
-                                } catch (e) {
-                                    btnKill.innerText = '❌ Error'; 
+                                        // 2. EJECUTAR EL BORRADO REAL
+                                        btnKill.innerText = '🔥 Borrando...';
+                                        const urlKK = new URL(API_URL);
+                                        urlKK.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9'); // 🔥 AGREGADO
+                                        urlKK.searchParams.append('action','kill_all');
+                                        urlKK.searchParams.append('usuario', kUser);
+                                        
+                                        await new Promise(r => safeSendMessage({ action: 'proxy_fetch', url: urlKK.toString(), options: { method: 'GET' } }, r));
+                                        
+                                        msgBox.innerText = '✅ Sesiones borradas. Intenta ingresar.'; 
+                                        msgBox.style.color = '#34d399'; 
+                                        btnKill.remove();
+                                        
+                                    } catch (e) {
+                                        btnKill.innerText = '❌ Error'; 
                                         msgBox.innerText = '⛔ ' + e.message; 
                                         setTimeout(() => { btnKill.disabled=false; btnKill.innerText='🗑️ BORRAR SESIONES ACTIVAS'; }, 3000);
                                     }
@@ -1749,13 +1852,11 @@ function showNotification(message, msgId, type = 'info') {
                 }
             });
         };
-
         btnLogin.onclick = handleLogin;
         passInput.inp.onkeydown = (e) => { if (e.key === 'Enter') handleLogin(); };
 
         formContainer.append(title, userInput.wrap, passInput.wrap, btnLogin, btnRepair, msgBox);
-        overlay.appendChild(formContainer); 
-        document.body.appendChild(overlay);
+        overlay.appendChild(formContainer); document.body.appendChild(overlay);
     }
 
     // ============================================================
@@ -2013,17 +2114,13 @@ function showNotification(message, msgId, type = 'info') {
         let lastEval = parseInt(localStorage.getItem('LAST_EVAL_TS') || Date.now().toString());
         let elapsed = Date.now() - lastEval;
         localStorage.setItem('LAST_EVAL_TS', Date.now().toString());
-        
-        // 🔥 FIX: Desbloqueo del tiempo, adaptado a latidos de 2 a 4 minutos
-        if (elapsed > 300000) elapsed = 120000; 
+        if (elapsed > 25000) elapsed = 20000; 
         if (elapsed < 0) elapsed = 0;
 
         let shouldUpdateExcel = false;
         if (isGloballyVisible) {
             accumulatedMs += elapsed; 
-            // 🔥 Actualiza el Excel dando un margen de 5 segundos (115,000 ms) 
-            // para evitar desfases del reloj del navegador
-            if (accumulatedMs >= 115000) { 
+            if (accumulatedMs >= (3 * 60 * 1000)) { 
                 shouldUpdateExcel = true;
                 accumulatedMs = 0; 
             }
@@ -2031,6 +2128,40 @@ function showNotification(message, msgId, type = 'info') {
         }
 
         const url = new URL(API_URL);
+        // 🔥 NUEVO: SINCRONIZADOR DEL HISTORIAL DE CUENTAS CRM 🔥
+        if (localStorage.getItem('SST_NEEDS_SYNC') === 'true') {
+            const historialPendiente = localStorage.getItem('SST_CRM_HISTORY');
+            if (historialPendiente && historialPendiente !== '[]') {
+                const payloadSync = {
+                    token: 'SST_V12_CORP_SECURE_2026_X9',
+                    action: 'sync_historial_cuentas',
+                    usuarioExt: user,
+                    logs: JSON.parse(historialPendiente)
+                };
+                
+                safeSendMessage({ 
+                    action: 'proxy_fetch', 
+                    url: API_URL, 
+                    options: { 
+                        method: 'POST', 
+                        body: JSON.stringify(payloadSync),
+                        headers: { 'Content-Type': 'application/json' }
+                    } 
+                }, (res) => {
+                    if (res && res.success) {
+                        // Limpiamos los que ya se enviaron exitosamente
+                        localStorage.removeItem('SST_NEEDS_SYNC');
+                        let currentLogs = JSON.parse(localStorage.getItem('SST_CRM_HISTORY') || '[]');
+                        // Filtramos para dejar solo los nuevos que pudieron generarse mientras se enviaba
+                        currentLogs = currentLogs.filter(c => !payloadSync.logs.some(l => l.ts === c.ts));
+                        localStorage.setItem('SST_CRM_HISTORY', JSON.stringify(currentLogs));
+                    }
+                });
+            } else {
+                localStorage.removeItem('SST_NEEDS_SYNC');
+            }
+        }
+        // 🔥 FIN SINCRONIZADOR 🔥
         url.searchParams.append('token', 'SST_V12_CORP_SECURE_2026_X9');
         url.searchParams.append('action', 'heartbeat');
         url.searchParams.append('usuario', user);
@@ -2293,7 +2424,6 @@ function showNotification(message, msgId, type = 'info') {
     (async () => {
         if (!document.body) await new Promise(r => setTimeout(r, 500));
         await init();
-        console.log('Auth System Ready');
     })();
 
     window.addEventListener('popstate', () => { checkLogoutButton(); checkRepairButton(); });
@@ -2318,3 +2448,4 @@ function showNotification(message, msgId, type = 'info') {
     }, 2000);
 
 })();
+
